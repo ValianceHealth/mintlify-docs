@@ -1,0 +1,68 @@
+---
+title: "First Steps"
+description: "How to choose between HealthProximate's five workflows and a typical user journey."
+---
+
+Once you're set up, the main question is *which workflow answers your question*. This
+page is a quick decision guide.
+
+## The common starting point
+
+Almost every task begins the same way: **search for the procedure, condition, or DRG
+you care about**. The [Entity Resolver](/workflows/entity-resolver) turns that
+free-text term into the standardized ID the other workflows need. You rarely have
+those IDs up front, so resolving first is the prerequisite step.
+
+## Choosing a workflow
+
+| Your question | Use |
+| --- | --- |
+| "What does a typical case for this procedure look like?" | [Dashboard](/workflows/dashboard) |
+| "How have revenue, cost, margin, or outcomes trended over a period?" | [Analytics](/workflows/analytics) |
+| "What is a *future/hypothetical* case likely to cost, earn, or take?" | [Predictions](/workflows/predictions) |
+| "How would a price or discount change affect revenue?" | [Simulation](/workflows/simulation) |
+
+<Tip>
+  **Dashboard vs. Analytics:** the Dashboard answers "what is the shape of this one
+  item right now?" with a quick distribution. Analytics answers "how does a metric
+  behave across a date range, broken down by surgeon, payor, provider, or client?"
+</Tip>
+
+## A typical user journey
+
+<Steps>
+  <Step title="Resolve">
+    Search for and select your procedure / condition / DRG.
+  </Step>
+  <Step title="Understand the shape">
+    Open the [Dashboard](/workflows/dashboard) to see the high-level distribution.
+  </Step>
+  <Step title="Dig into the numbers">
+    Use [Analytics](/workflows/analytics) to break a metric down over time and by
+    dimension.
+  </Step>
+  <Step title="Look forward">
+    Use [Predictions](/workflows/predictions) to estimate a metric for a hypothetical
+    case profile.
+  </Step>
+  <Step title="Test a change">
+    Use [Simulation](/workflows/simulation) to model the revenue impact of a pricing
+    or discount change.
+  </Step>
+</Steps>
+
+## Tips for interpreting outputs
+
+- **Mind the metric vocabulary.** The same idea can be named differently in different
+  workflows — for example, billed revenue is called `revenue` in Analytics and the
+  Dashboard, but `price` in Predictions. Each workflow page lists its exact metrics.
+- **Hospital-only metrics** (hospital revenue, profit, margin) exclude certain bill
+  types and professional fees and do not apply to insurance/payor organizations.
+- **Predictions are estimates**, presented with confidence and prediction-interval
+  context — read them as ranges, not single guaranteed numbers.
+- **Everything is scoped to your organization.** You are never seeing another
+  organization's data.
+
+<Card title="Browse the workflows" icon="grip" href="/workflows/entity-resolver">
+  Start with the Entity Resolver, the prerequisite for the rest.
+</Card>

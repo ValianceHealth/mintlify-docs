@@ -1,0 +1,107 @@
+---
+title: "FAQ"
+description: "Common questions about HealthProximate — what it does, which workflow to use, how access and data work, and how to get support."
+---
+
+## About the product
+
+<AccordionGroup>
+  <Accordion title="What does HealthProximate help with?">
+    HealthProximate helps hospitals, providers, and payor organizations understand the
+    clinical and financial shape of the care they deliver — typical cost and revenue
+    per procedure, how outcomes and length of stay vary, what a future case is likely
+    to look like, and how a pricing or supply change would affect revenue. See the
+    [Overview](/).
+  </Accordion>
+  <Accordion title="Which workflow should I use?">
+    - **[Dashboard](/workflows/dashboard)** — the typical shape of one procedure,
+      condition, or DRG.
+    - **[Analytics](/workflows/analytics)** — a metric trended over a date range and
+      broken down by surgeon, payor, provider, or client.
+    - **[Predictions](/workflows/predictions)** — an estimate for a hypothetical/future
+      case.
+    - **[Simulation](/workflows/simulation)** — the revenue impact of a price or
+      discount change.
+
+    All of them start with the **[Entity Resolver](/workflows/entity-resolver)**, which
+    turns a name into the standardized ID the workflows need. See
+    [First Steps](/getting-started/first-steps) for a decision guide.
+  </Accordion>
+  <Accordion title="Why are some metrics named differently across workflows?">
+    Each workflow has its own metric vocabulary. The clearest example: billed revenue
+    is called `revenue` in Analytics and the Dashboard, but `price` in Predictions.
+    Each workflow page lists its exact metric values.
+  </Accordion>
+</AccordionGroup>
+
+## Onboarding & access
+
+<AccordionGroup>
+  <Accordion title="How do I get access?">
+    Access is provisioned per organization. If you don't have a login, your
+    organization administrator or the Valiance Health team can set one up — email
+    [admin@valiancehealth.ai](mailto:admin@valiancehealth.ai). See
+    [Getting Started](/getting-started).
+  </Accordion>
+  <Accordion title="What does onboarding involve?">
+    Your organization's case, cost, and billing data is onboarded as part of
+    implementation, after which the workflows produce meaningful results. Walk through
+    the [Onboarding Checklist](/getting-started/onboarding-checklist) to confirm you're
+    set up and your first results look right.
+  </Accordion>
+  <Accordion title="Why is a metric or workflow unavailable to me?">
+    Some metrics depend on organization type. For example, hospital-only metrics
+    (hospital revenue, profit, margin) don't apply to insurance/payor organizations,
+    and prediction metric availability can vary by organization and procedure. If
+    something you expect is missing, contact [Support](/support).
+  </Accordion>
+</AccordionGroup>
+
+## Data
+
+<AccordionGroup>
+  <Accordion title="Is my data isolated from other organizations?">
+    Yes. HealthProximate is multi-tenant and every result is scoped to your own
+    organization. You never select or see another organization's data.
+  </Accordion>
+  <Accordion title="What file formats can I upload?">
+    The secure upload API accepts common document and data formats (for example PDF,
+    CSV, XLSX, and similar). Files must include a valid extension. See the
+    [API Overview](/api/overview).
+  </Accordion>
+  <Accordion title="Where is data stored?">
+    Uploaded files are stored in isolated, organization-specific cloud storage. For
+    detailed security, privacy, and data-handling information, see the
+    [Security](https://valiancehealth.com/security) and
+    [Privacy Policy](https://valiancehealth.com/privacy-policy) pages on the main
+    Valiance Health website.
+  </Accordion>
+</AccordionGroup>
+
+## API & integration
+
+<AccordionGroup>
+  <Accordion title="How do I get an API key?">
+    Contact the team at [admin@valiancehealth.ai](mailto:admin@valiancehealth.ai) with
+    your organization details to request credentials. See the
+    [API Overview](/api/overview).
+  </Accordion>
+  <Accordion title="Where is the full API reference?">
+    The public [API Overview](/api/overview) covers the high-level model. Detailed and
+    restricted implementation references are available only through controlled access
+    channels to approved customers and partners.
+  </Accordion>
+  <Accordion title="Can I rotate my API key?">
+    Yes. Contact support to rotate a key; the previous key typically remains valid for
+    a short transition period.
+  </Accordion>
+</AccordionGroup>
+
+## Support
+
+<AccordionGroup>
+  <Accordion title="How do I get help?">
+    Email **[admin@valiancehealth.ai](mailto:admin@valiancehealth.ai)**. See the
+    [Support](/support) page for what to include so we can help quickly.
+  </Accordion>
+</AccordionGroup>

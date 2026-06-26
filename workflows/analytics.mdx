@@ -1,0 +1,96 @@
+---
+title: "Analytics"
+description: "Aggregate revenue, cost, margin, outcome, and operational metrics over a date range, with pivots and filters."
+---
+
+## Overview
+
+Analytics aggregates a chosen metric over a date range for a procedure, condition, or
+DRG, and lets you break it down by an organizational dimension and apply advanced
+filters. It's the workhorse for "how has this metric behaved, and for whom?"
+
+## When to use it
+
+- You want to track a financial, outcome, or operational metric over a time window.
+- You want to compare across surgeons, payors, providers, or clients.
+- You want to filter or segment — by percentile band, or by excluding certain
+  diagnoses.
+
+## Inputs
+
+- **Duration** — a date range. The default lookback is the **last 365 days**.
+- **Domain** — `procedure`, `condition`, or `drg`.
+- **Metric** — see the supported values below.
+- **View type** — `detail`, `avg`, or `sum`.
+- **Filters / pivot** — group by surgeon (the default), payor, provider, or client;
+  optionally filter to specific entities, a percentile band, or exclude diagnoses.
+
+### Supported metrics
+
+<ParamField path="metric" type="string">
+  One of the following nine values:
+
+  `revenue`, `hospital_revenue`, `profit`, `margin`, `cost`, `discount`, `los`,
+  `time`, `readmission_30`
+</ParamField>
+
+| Metric | Meaning |
+| --- | --- |
+| `revenue` | Billed revenue |
+| `hospital_revenue` | Hospital-only revenue (excludes insurance organizations) |
+| `profit` | Hospital revenue minus cost (hospital metric) |
+| `margin` | Profit as a percentage of hospital revenue (hospital metric, shown in %) |
+| `cost` | Cost |
+| `discount` | Discount amount |
+| `los` | Length of stay (days) |
+| `time` | Surgical/operating time (minutes) |
+| `readmission_30` | 30-day readmission outcome |
+
+### View types
+
+<ParamField path="view" type="string">
+  One of: `detail`, `avg`, `sum`.
+</ParamField>
+
+- `detail` — itemized rows.
+- `avg` — averaged values across the selected scope.
+- `sum` — totaled values across the selected scope.
+
+## Steps
+
+<Steps>
+  <Step title="Set the duration">
+    Choose a date range, or accept the default last-365-days window.
+  </Step>
+  <Step title="Pick domain, metric, and view type">
+    Select the procedure/condition/DRG, the metric, and `detail` / `avg` / `sum`.
+  </Step>
+  <Step title="Apply filters or a pivot">
+    Group by surgeon, payor, provider, or client; optionally filter by percentile band
+    or exclude specific diagnoses.
+  </Step>
+  <Step title="Read the results">
+    Review the aggregated output for your selection.
+  </Step>
+</Steps>
+
+## Outputs
+
+Aggregated metric values for your selection, shaped by the chosen view type
+(`detail` / `avg` / `sum`) and broken down by the pivot dimension you selected.
+
+## Notes & caveats
+
+- **Hospital-only metrics** (`hospital_revenue`, `profit`, `margin`) exclude certain
+  bill types and professional fees and are **not available for insurance/payor
+  organizations**.
+- **Metric vocabulary differs by workflow.** The Analytics metric set is *not* the
+  same as the Predictions set — for example, Predictions uses `price` for billed
+  amount, while Analytics uses `revenue`.
+- `margin` is expressed as a percentage; financial metrics are in currency.
+- Results are scoped to your organization.
+
+## Support
+
+Need help building or interpreting an analytics view? See [Support](/support) or email
+**[admin@valiancehealth.ai](mailto:admin@valiancehealth.ai)**.
