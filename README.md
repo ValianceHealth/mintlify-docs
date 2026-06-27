@@ -1,6 +1,6 @@
-# HealthProximate Documentation
+# Healthproximate Documentation
 
-Public product documentation and help center for **HealthProximate** by **Valiance Health** — the healthcare cost, revenue, and operations analytics platform. This site is built with [Mintlify](https://mintlify.com).
+Public product documentation and help center for **Healthproximate** by **Valiance Health** — the healthcare cost, revenue, and operations analytics platform. This site is built with [Mintlify](https://mintlify.com).
 
 This repository contains the **Stage 1** public documentation footprint: a credible, public, auditor- and customer-friendly documentation surface (service description, customer-facing workflow guides, a public API overview, FAQ, and a visible support path). The full internal API reference remains private behind controlled access.
 

@@ -1,4 +1,4 @@
-# HealthProximate Documentation — agent instructions
+# Healthproximate Documentation — agent instructions
 
 The full, canonical project instructions live in [`CLAUDE.md`](./CLAUDE.md). Read that
 file first — it covers project context, terminology, the public/private content

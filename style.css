@@ -1,0 +1,14 @@
+/* Valiance Health brand styling for the Healthproximate docs.
+   Mirrors valiancehealth.com: Instrument Sans (set via docs.json `fonts`)
+   for text, JetBrains Mono for code. Keep this file minimal — Mintlify's
+   element/ID selectors can change between releases. */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+/* Match the marketing site's monospace for inline and block code. */
+code,
+pre,
+kbd {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, 'Liberation Mono', 'Courier New', monospace;
+}

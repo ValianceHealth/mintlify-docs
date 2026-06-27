@@ -1,6 +1,6 @@
-# HealthProximate Documentation — Claude instructions
+# Healthproximate Documentation — Claude instructions
 
-This is the **public** documentation site for **HealthProximate** (the product) by
+This is the **public** documentation site for **Healthproximate** (the product) by
 **Valiance Health** (the company), built on [Mintlify](https://mintlify.com). It is the
 Stage 1 public documentation footprint: a credible, customer- and auditor-friendly help
 center. The full internal API reference stays private behind controlled access.
@@ -17,7 +17,7 @@ center. The full internal API reference stays private behind controlled access.
 - For Mintlify product knowledge (components, configuration, writing standards), install the Mintlify skill: `npx skills add https://mintlify.com/docs`
 
 ## Terminology
-- The product is **HealthProximate**; the company is **Valiance Health**.
+- The product is **Healthproximate**; the company is **Valiance Health**.
 - Refer to the five core capabilities as **workflows**: entity resolver, dashboard, analytics, predictions, simulation.
 
 ## Content strategy

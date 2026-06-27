@@ -1,12 +1,21 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "HealthProximate Documentation",
-  "description": "Public product documentation and help center for HealthProximate by Valiance Health.",
+  "name": "Healthproximate Documentation",
+  "description": "Public product documentation and help center for Healthproximate by Valiance Health.",
   "colors": {
-    "primary": "#0E7490",
-    "light": "#22D3EE",
-    "dark": "#0E7490"
+    "primary": "#14143C",
+    "light": "#54A2FF",
+    "dark": "#155DFC"
+  },
+  "fonts": {
+    "family": "Instrument Sans"
+  },
+  "background": {
+    "color": {
+      "light": "#FCFCFF",
+      "dark": "#0A0A0A"
+    }
   },
   "favicon": "/favicon.svg",
   "navigation": {
