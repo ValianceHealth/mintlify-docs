@@ -17,6 +17,10 @@
       "dark": "#0A0A0A"
     }
   },
+  "logo": {
+    "light": "/logo/valiance-health-full-color.png",
+    "dark": "/logo/valiance-health-white.png"
+  },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
