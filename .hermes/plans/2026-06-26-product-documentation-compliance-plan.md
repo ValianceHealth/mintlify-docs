@@ -211,9 +211,9 @@ This helps GOV-6 by showing customer-facing change communication.
   - getting-started
   - faq
   - support
-  - api`
+  - api
   - release-notes
-  - security-and-compliance` (optional cross-link to existing security page)
+  - security-and-compliance (optional cross-link to existing security page)
 
 ### Later customer-only information architecture
 - authenticated docs or portal

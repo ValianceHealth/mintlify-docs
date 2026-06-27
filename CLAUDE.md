@@ -85,7 +85,7 @@ access-controlled and private. `api/overview.mdx` already communicates this spli
 
 ## Local preview
 Install the Mintlify CLI and preview from the repo root (where `docs.json` lives):
-```
+```bash
 npm i -g mint
 mint dev
 ```

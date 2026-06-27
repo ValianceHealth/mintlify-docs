@@ -23,13 +23,13 @@ This site is intended for a **public** audience. It deliberately excludes the fu
 
 Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview documentation changes locally:
 
-```
+```bash
 npm i -g mint
 ```
 
 Run the following command at the root of the repository, where `docs.json` is located:
 
-```
+```bash
 mint dev
 ```
 
