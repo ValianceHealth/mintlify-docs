@@ -1,0 +1,8 @@
+# Planning / passover material — not published
+.hermes/
+
+# Dependencies & local tooling
+node_modules/
+
+# OS cruft
+.DS_Store
