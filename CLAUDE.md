@@ -101,8 +101,11 @@ published**):
 - `.hermes/imports/healthproximate-stage1-draft/` — the imported Stage 1 source draft and its `DRAFT-OVERVIEW.md` (content provenance, public/private rationale, open TODOs).
 
 Open items still to confirm with product/security owners: SLAs, onboarding sign-offs,
-the public OpenAPI subset (Stage 2), the preferred public support alias, and hosting
-shape (`valiancehealth.com/docs` vs `docs.valiancehealth.com`).
+the public OpenAPI subset (Stage 2), and the preferred public support alias.
+
+Hosting is locked: the site serves at **`docs.valiancehealth.com`** (set as the
+canonical base URL in `docs.json` via `seo.metatags.canonical`). The custom domain
+must still be connected in the Mintlify dashboard + a `docs` CNAME added in DNS.
 
 ## Compliance and tracking (Linear)
 - This work supports the **Product Documentation** compliance control (Vanta `product-documentation`) — it provides the public service description, customer documentation, and visible support path while the full internal API reference stays private.
