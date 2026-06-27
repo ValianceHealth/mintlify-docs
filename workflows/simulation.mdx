@@ -1,0 +1,86 @@
+---
+title: "Simulation"
+description: "Model the revenue impact of supply price changes and billing-group discount rules."
+---
+
+## Overview
+
+Simulation is what-if revenue forecasting. You apply markup or discount rules to a
+recent baseline and forecast the impact. It has two modes:
+
+- **Items** — supply-level price changes.
+- **Billing groups** — group-level discount or uplift rules.
+
+## When to use it
+
+- You're considering a price change on one or more supply items and want to estimate
+  the revenue effect.
+- You're considering a discount (or uplift) on a billing group and want to model the
+  outcome.
+- You want to compare scenarios before committing to a pricing decision.
+
+## Inputs
+
+Shared inputs (most are optional and fall back to sensible defaults):
+
+- **Mode** — items or billing groups.
+- **Lookback window** — the historical date range used as the baseline.
+- **Forecast horizon** — how far ahead to project.
+- **Scope filters** — narrow the simulation (for example, by payor organization,
+  specialty, procedure, surgeon, or diagnosis).
+
+Mode-specific inputs:
+
+- **Items mode** — one or more selected supply items, each with a markup or discount
+  expressed as a **percentage** or a **flat per-unit price**.
+- **Billing-groups mode** — a selected billing group with a discount or uplift rule.
+
+## Steps
+
+<Steps>
+  <Step title="Choose a mode">
+    Select items or billing groups.
+  </Step>
+  <Step title="Set the window and scope">
+    Optionally set the lookback window, forecast horizon, and any scope filters.
+  </Step>
+  <Step title="Define the change">
+    For items, select supplies and set a percentage or flat price change. For billing
+    groups, select a group and set a discount or uplift.
+  </Step>
+  <Step title="Run the simulation">
+    Run it and review the projected impact.
+  </Step>
+</Steps>
+
+## Outputs
+
+The results show the projected impact broken down three ways:
+
+- **Overall** — totals before and after, the net impact, and the percentage change.
+- **By procedure** — revenue before/after and share of impact per procedure.
+- **By payor** — the same breakdown per payor.
+
+Supporting detail includes per-rule or per-tier impacts and baseline-vs-adjusted
+forecast series.
+
+## Notes & caveats
+
+<Warning>
+  **New / unseen item estimation is not available.** Estimating utilization or revenue
+  for a brand-new item that has no history is **not** a supported capability in the
+  current product. Simulation works from items and groups that already have a baseline
+  in your data. Do not rely on it to price a never-before-seen item.
+</Warning>
+
+- Simulation requires enough recent history to build a baseline forecast. If the
+  underlying forecast model isn't available for your scope, the simulation can't run
+  for that selection.
+- Forecasts are estimates and come with model-quality context — treat them as
+  scenario guidance, not guaranteed outcomes.
+- Results are scoped to your organization.
+
+## Support
+
+Need help setting up a scenario or reading the impact breakdown? See [Support](../support)
+or email **[admin@valiancehealth.ai](mailto:admin@valiancehealth.ai)**.

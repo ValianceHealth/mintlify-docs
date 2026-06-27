@@ -1,0 +1,79 @@
+---
+title: "Getting Started"
+description: "What you need before you begin, how access works, and where to start in HealthProximate."
+---
+
+This guide gets a new user oriented in HealthProximate and pointed at their first
+useful workflow.
+
+## Who this guide is for
+
+New customer users who have (or are about to receive) access to HealthProximate and
+want to understand the platform before diving in. No prior setup knowledge is assumed.
+
+## What you need before you start
+
+<Steps>
+  <Step title="An account">
+    Access to HealthProximate is provisioned per organization. If you do not yet have
+    a login, your organization administrator or the Valiance Health team will set one
+    up for you. See [Support](/support) to request access.
+  </Step>
+  <Step title="Your organization's data onboarded">
+    HealthProximate works against your organization's case, cost, and billing data.
+    Your data is onboarded as part of implementation. Results you see are always
+    scoped to your own organization.
+  </Step>
+  <Step title="(Optional) API credentials">
+    If you plan to integrate programmatically, you'll need an API key or login
+    credentials. See the [API Overview](/api/overview).
+  </Step>
+</Steps>
+
+## How access works
+
+- Access is **organization-scoped**. Every result you see is limited to your own
+  organization's data.
+- User sign-in uses standard authenticated sessions.
+- Programmatic access uses tokens or API keys issued to your organization — see the
+  [API Overview](/api/overview).
+
+<Note>
+  HealthProximate is multi-tenant by design. You never select or pass another
+  organization's identifier — your scope is determined by who you are signed in as.
+</Note>
+
+## Getting oriented
+
+Most workflows share a common pattern:
+
+1. **Search for what you care about** — a procedure, condition, or DRG — using the
+   search box. This is the [Entity Resolver](/workflows/entity-resolver), and it is
+   the prerequisite for everything else: it converts a name into the standardized ID
+   the rest of the product uses.
+2. **Pick a workflow** depending on the question you're answering (see
+   [First Steps](/getting-started/first-steps) for how to choose).
+3. **Read and interpret the output**, keeping the per-workflow caveats in mind.
+
+## Recommended first workflow
+
+If you're not sure where to begin, open the [Dashboard](/workflows/dashboard) for a
+procedure you know well. It gives you a high-level distribution view that is easy to
+sanity-check against your own expectations — a good way to build confidence in the
+data before moving to analytics or predictions.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Onboarding Checklist" icon="list-check" href="/getting-started/onboarding-checklist">
+    A practical step-by-step list to confirm you're set up correctly.
+  </Card>
+  <Card title="First Steps" icon="signs-post" href="/getting-started/first-steps">
+    How to choose between the five workflows for your question.
+  </Card>
+</CardGroup>
+
+## Getting help
+
+Questions during onboarding go to **[admin@valiancehealth.ai](mailto:admin@valiancehealth.ai)**.
+See [Support](/support) for what to include in a request.

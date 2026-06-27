@@ -1,0 +1,65 @@
+---
+title: "Dashboard"
+description: "See the high-level case distribution for a chosen procedure, condition, or DRG."
+---
+
+## Overview
+
+The Dashboard gives you the high-level shape of a single domain item — a procedure,
+condition, or DRG. It's the "understand this at a glance" view: typical values across
+key metrics, summarized as central tendencies (mean and median) rather than a full
+time series.
+
+## When to use it
+
+- You want a quick, sanity-checkable picture of a procedure, condition, or DRG.
+- You're starting an analysis and want to build confidence in the data before moving
+  to Analytics or Predictions.
+- You want a fast read on typical cost, revenue, length of stay, and surgical time for
+  one item.
+
+## Inputs
+
+- **Domain** — `procedure`, `condition`, or `drg`.
+- **A specific item** in that domain — selected via the
+  [Entity Resolver](./entity-resolver) (resolve the name to an ID first).
+- **Metric** — the financial or operational measure to summarize.
+
+## Steps
+
+<Steps>
+  <Step title="Choose a domain">
+    Select procedure, condition, or DRG.
+  </Step>
+  <Step title="Select the item">
+    Use the search box to resolve the name, then pick the specific item.
+  </Step>
+  <Step title="Read the distribution">
+    Review the summarized distribution — central tendencies across the key metrics.
+  </Step>
+</Steps>
+
+## Outputs
+
+A compact distribution summary for the selected item, including central-tendency rows
+(such as mean and median) across columns like:
+
+- the selected financial metric (e.g. revenue, cost, or profit),
+- length of stay (days),
+- surgical/operating time (minutes).
+
+Margin-style metrics are shown as a percentage; financial metrics are shown in
+currency.
+
+## Notes & caveats
+
+- The Dashboard summarizes the **shape** of an item; for trends over a date range or
+  breakdowns by surgeon/payor/provider/client, use [Analytics](./analytics).
+- The set of metrics available on this view is intentionally focused. Hospital-only
+  metrics depend on your organization type.
+- Results are scoped to your organization.
+
+## Support
+
+Need help interpreting a distribution? See [Support](../support) or email
+**[admin@valiancehealth.ai](mailto:admin@valiancehealth.ai)**.

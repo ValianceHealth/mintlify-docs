@@ -1,0 +1,70 @@
+---
+title: "Entity Resolver"
+description: "Turn free-text clinical and commercial terms into the standardized IDs every other HealthProximate workflow needs."
+---
+
+## Overview
+
+The Entity Resolver turns free text — a procedure name, a condition, a surgeon, a
+payor — into the standardized identifier the rest of HealthProximate uses. It also
+handles clinical-terminology lookups across standard vocabularies and related-concept
+expansion.
+
+It is the **prerequisite for every other workflow**: the Dashboard, Analytics,
+Predictions, and Simulation all operate on resolved IDs, not names.
+
+## When to use it
+
+- Whenever you start a new analysis and need to find a procedure, condition, or DRG.
+- When you need to locate an organizational entity such as a surgeon, payor, provider,
+  client, specialty, supply, or billing group.
+- When you need to look up or map clinical concepts (conditions, drugs, measurements)
+  across standard medical vocabularies.
+
+## Inputs
+
+- **Search text** — a plain-language term, e.g. `total knee replacement`, `sepsis`,
+  `type 2 diabetes`.
+- **Entity type / domain** — what kind of thing you're resolving (procedure,
+  condition, DRG, surgeon, payor, and other organizational entities).
+- **(Optional) filters** — narrow a clinical lookup to specific vocabularies or a
+  clinical domain (for example, Condition, Procedure, Drug, or Measurement).
+
+## Steps
+
+<Steps>
+  <Step title="Open the search box">
+    The search box sits at the top of any workflow.
+  </Step>
+  <Step title="Type your term">
+    Enter the procedure, condition, DRG, or entity you're looking for.
+  </Step>
+  <Step title="Pick the best match">
+    Review the ranked matches and select the one you mean.
+  </Step>
+  <Step title="Continue into a workflow">
+    The selected entity feeds the Dashboard, Analytics, Predictions, and Simulation
+    pickers automatically.
+  </Step>
+</Steps>
+
+## Outputs
+
+- A ranked list of candidate matches, each with a name and a relevance score.
+- The standardized identifier for the selected entity, used downstream.
+- For clinical concept lookups, related concepts (such as broader/narrower terms) and
+  cross-vocabulary mappings where available.
+
+## Notes & caveats
+
+- **Resolve before anything else.** Other workflows expect standardized IDs; resolving
+  first avoids mismatched or empty results.
+- **Pick the most specific match** that represents what you mean — relevance scores
+  rank candidates but the right clinical choice is yours.
+- Results are scoped to your organization where applicable (for example, your
+  surgeons, payors, and clients).
+
+## Support
+
+Questions about resolving a term or an unexpected match? See [Support](../support) or
+email **[admin@valiancehealth.ai](mailto:admin@valiancehealth.ai)**.

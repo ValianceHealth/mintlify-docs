@@ -1,0 +1,97 @@
+---
+title: "API Overview"
+description: "How programmatic access to HealthProximate works, and how public documentation differs from restricted implementation references."
+---
+
+## What the API is for
+
+HealthProximate offers programmatic access for customers and approved implementation
+partners who want to integrate the platform into their own systems — for example, to
+upload data securely or to query analytics and predictions from another application.
+
+This page is a **high-level overview**. It intentionally does not reproduce the full
+internal API reference.
+
+<Info>
+  **Public vs. restricted documentation.** HealthProximate provides public product
+  documentation and curated developer guidance for customer-facing integration
+  workflows. Detailed and restricted implementation references — including the
+  complete API schema and internal or administrative endpoints — are available **only
+  through controlled access channels** to approved customers and partners. This keeps
+  the public surface clean and limits unnecessary disclosure.
+</Info>
+
+## How access works
+
+- **Programmatic access is granted per organization.** You request credentials and the
+  Valiance Health team issues them.
+- Two credential patterns are used depending on the integration:
+  - **API key** — sent in an `X-API-Key` request header. Used by service integrations
+    such as the secure file upload API.
+  - **Bearer token (JWT)** — obtained by signing in, then sent in an `Authorization:
+    Bearer <token>` header. Used by application/agent integrations.
+- All requests use **HTTPS**, and all results are **scoped to your organization**.
+
+<Warning>
+  Treat API keys and tokens as secrets. Never commit them to version control, never
+  share them publicly, and store them in environment variables or a secrets manager.
+  Contact support to rotate a key.
+</Warning>
+
+## Common integration use cases
+
+- **Secure file upload** — upload data files to your organization's isolated storage
+  using short-lived, presigned URLs, with a separate path for large files.
+- **Conversational / analytical queries** — submit a natural-language question and
+  receive structured analysis, optionally streamed for real-time progress.
+
+### Example: request a secure upload URL
+
+The secure file upload API uses a two-step pattern — request a short-lived presigned
+URL, then upload directly to storage. A request to obtain an upload URL looks like:
+
+```bash
+curl -X POST https://api.v2.healthproximate.com/api/v1/upload/presigned-url/ \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"filename": "report.pdf"}'
+```
+
+Key properties:
+
+- Presigned URLs are temporary (they expire, typically within an hour) and single-use.
+- Filenames are sanitized for security and compatibility.
+- Files are isolated per organization.
+
+A health check endpoint is available without authentication so you can confirm the
+service is reachable before sending credentials.
+
+<Note>
+  Full request/response fields, error codes, large-file (multipart) flows, and
+  language-specific examples are provided to approved integrators through the
+  controlled-access developer materials — see "Requesting integration help" below.
+</Note>
+
+## Conventions
+
+- **HTTPS only.**
+- **JSON** request and response bodies for application endpoints.
+- **Snake_case** field names in request and response payloads.
+- Standard HTTP status codes, with errors returned as a JSON object containing an
+  `error` type and a human-readable `message`.
+
+## Rate limits
+
+There are no strict published rate limits at this stage. As a courtesy guideline,
+keep automated traffic modest (well within normal integration volumes); throttling may
+be introduced in the future. See [Support](/support) if you anticipate high-volume use.
+
+## Requesting integration help
+
+To request API credentials, the restricted developer reference, or integration
+support, email **[admin@valiancehealth.ai](mailto:admin@valiancehealth.ai)**. See
+[Support](/support) for what to include in your request.
+
+{/* TODO: When the sanitized public OpenAPI subset is ready (Stage 2), link the
+generated public reference here and enumerate the specific endpoints approved for
+public listing. Until then, keep this page high-level. */}
