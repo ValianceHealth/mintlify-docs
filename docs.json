@@ -29,6 +29,11 @@
       "family": "Instrument Sans"
     }
   },
+  "seo": {
+    "metatags": {
+      "canonical": "https://docs.valiancehealth.com"
+    }
+  },
   "navigation": {
     "tabs": [
       {
