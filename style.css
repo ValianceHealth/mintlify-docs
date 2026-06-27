@@ -12,3 +12,12 @@ kbd {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco,
     Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
+
+/* Enlarge the navbar logo. The wordmark is ~4.4:1, so raising the height
+   widens it proportionally. Mintlify pins the logo with a utility class, so
+   override with !important. Tune the height value to taste. */
+nav-logo img {
+  height: 2.5rem !important;
+  max-height: 2.5rem !important;
+  width: auto !important;
+}
