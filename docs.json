@@ -22,6 +22,13 @@
     "dark": "/logo/valiance-health-primary-white.png"
   },
   "favicon": "/favicon.svg",
+  "thumbnails": {
+    "appearance": "dark",
+    "background": "/images/og-background.png",
+    "fonts": {
+      "family": "Instrument Sans"
+    }
+  },
   "navigation": {
     "tabs": [
       {
