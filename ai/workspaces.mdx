@@ -1,0 +1,174 @@
+---
+title: "Workspaces"
+description: "Organize files and authored documents in an AI workspace, and control exactly what the workspace chat assistant uses by promoting documents to chat."
+---
+
+## Overview
+
+A **workspace** is a place to keep the context you want to work with alongside the
+Healthproximate AI chat assistant. Each workspace holds two kinds of content — uploaded
+**files** and authored **documents** — and gives you precise control over which of that
+content the chat assistant actually uses.
+
+The key idea: adding content to a workspace does **not** automatically change how the
+assistant behaves. You decide what the assistant honors by **promoting** specific
+documents **to chat**. Everything else stays as reference material you can browse, but
+that the assistant won't treat as instructions.
+
+Open workspaces from **Dashboard → AI → Workspaces**.
+
+<Note>
+  Workspaces are currently available to superusers.
+</Note>
+
+## When to use it
+
+- You want the chat assistant to follow consistent preferences every time you work in a
+  workspace (tone, format, house conventions).
+- You have reusable how-to content or standing facts you want the assistant to apply
+  without re-explaining them each session.
+- You want to keep reference PDFs and documents in one place that the assistant can look
+  through when you ask.
+
+## Files vs. documents
+
+A workspace separates content you bring in from content you author in the app.
+
+| | **Files** | **Documents** |
+| --- | --- | --- |
+| What they are | Uploaded PDFs and documents | Markdown you author in the app |
+| How they get there | Upload | **+ New document**, then edit and save |
+| How the assistant uses them | Reference the assistant can list, read, and search when you ask | Reference only — until you **promote** the document to chat |
+
+Files are always available to the assistant as readable context: it can list them, open
+them, and search across them in response to your questions. Documents are different —
+authored documents are inert by default, and only start influencing the assistant once
+you promote them (see [Promoting a document to chat](#promoting-a-document-to-chat)).
+
+## Creating and editing documents
+
+<Steps>
+  <Step title="Create the document">
+    In a workspace, choose **+ New document** and pick a type (see
+    [The five document types](#the-five-document-types)).
+  </Step>
+  <Step title="Write and preview">
+    Author the content in markdown. The editor has an edit view and a preview view so
+    you can check how it will read.
+  </Step>
+  <Step title="Save">
+    Click **Save** to store your changes. Saving is explicit — if you try to leave with
+    unsaved edits, you'll be warned so you don't lose work.
+  </Step>
+</Steps>
+
+Documents live in the workspace and can be edited, re-typed, or archived at any time.
+
+## The five document types
+
+When you create a document you choose one of five types. The type determines what the
+document is for and, importantly, whether it can influence the chat assistant.
+
+| Type | What it's for | Can be promoted to chat? |
+| --- | --- | --- |
+| **Note** | Free-form notes and working scratch content | No |
+| **Runbook** | Step-by-step procedures for people to follow | No |
+| **Memory note** | Standing facts and context for the assistant to consider | Yes |
+| **Skill template** | Reusable how-to / skill content the assistant applies | Yes |
+| **Workspace instructions** | Workspace-wide behavior preferences for the assistant | Yes |
+
+Notes and Runbooks are for you and your team — they never affect the assistant. The
+other three types are the ones you can promote.
+
+## Promoting a document to chat
+
+Promotion is how you tell the assistant to honor a document. To promote, open the
+document's **⋯** menu and choose **Promote to chat**. A promoted document shows an
+**"In chat"** badge and a lightning icon in the sidebar, and the chat assistant in that
+workspace will start honoring it.
+
+Three types can be promoted, and each carries a different kind of standing:
+
+- **Workspace instructions** — workspace-wide behavior preferences. These have the
+  highest standing of the three. **Only one Workspace instructions document can be
+  active per workspace.**
+- **Skill template** — reusable how-to or skill content the assistant applies when it's
+  relevant.
+- **Memory note** — standing facts and context the assistant considers. Treat these as
+  context, not commands — they inform the assistant rather than direct it.
+
+<Warning>
+  **Only one active Workspace instructions document per workspace.** If a Workspace
+  instructions document is already promoted, promoting a second one is rejected. Remove
+  the first from chat before promoting the replacement.
+</Warning>
+
+### Editing a promoted document removes it from chat
+
+Promotion is tied to the exact content you reviewed. To keep "what you approved is what
+runs," Healthproximate automatically removes a document from chat when it changes:
+
+- **Editing the content** of a promoted document removes it from chat. You'll see a
+  warning when you save. Review the change, then re-promote it.
+- **Changing its type** removes it from chat.
+- **Archiving it** removes it from chat.
+
+<Warning>
+  After you edit a promoted document, it is no longer active in chat until you promote
+  it again. Re-promote once you've confirmed the new content is what you want the
+  assistant to use.
+</Warning>
+
+### Removing a document from chat
+
+To deactivate a promotion at any time, open the document's **⋯** menu and choose
+**Remove from chat**. The document stays in the workspace as reference — it just no
+longer influences the assistant. The "In chat" badge and lightning icon go away.
+
+### The `skills.md` file
+
+A workspace can also carry an uploaded file named exactly `skills.md` at the workspace
+root. It behaves like Workspace instructions. For most cases, an authored **Workspace
+instructions** document is the recommended in-app replacement — it's easier to edit,
+preview, and manage through the promotion lifecycle above.
+
+## Limits and scope
+
+- **Organization scope.** Everything in a workspace — files, documents, and promotions —
+  is scoped to the workspace's organization.
+- **Session size limits.** There's a limit on how much promoted content the assistant
+  uses in a single chat session. An oversized document is **skipped whole**, with a
+  notice, rather than being partially truncated — so the assistant never acts on half a
+  document. If you hit this, split large content into focused documents.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Why doesn't the chat assistant see my document?">
+    The most common reason is that the document **isn't promoted**. Authored documents
+    are reference-only until you promote them — open the document's **⋯** menu and
+    choose **Promote to chat**, then look for the **"In chat"** badge. Note that Notes
+    and Runbooks can't be promoted at all; only Memory notes, Skill templates, and
+    Workspace instructions can.
+  </Accordion>
+  <Accordion title="It worked before, but the assistant stopped following my document.">
+    Editing a promoted document's content removes it from chat automatically — the same
+    happens if its type was changed or it was archived. Open the document, confirm the
+    content is right, and **Promote to chat** again.
+  </Accordion>
+  <Accordion title="I can't promote a second Workspace instructions document.">
+    Only one Workspace instructions document can be active per workspace. Remove the
+    currently active one from chat first (its **⋯** menu → **Remove from chat**), then
+    promote the new one.
+  </Accordion>
+  <Accordion title="My document is promoted but the assistant seems to ignore part of it.">
+    Check whether it exceeds the per-session size limit. Oversized promoted documents
+    are skipped whole rather than truncated, and you'll see a notice. Split long content
+    into smaller, focused documents.
+  </Accordion>
+</AccordionGroup>
+
+## Support
+
+Questions about workspaces or promoting documents to chat? See [Support](/support) or
+email **[admin@valiancehealth.ai](mailto:admin@valiancehealth.ai)**.
