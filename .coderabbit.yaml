@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+
+reviews:
+  profile: "chill"
+  high_level_summary: true
+  poem: false
+  auto_review:
+    enabled: true
+    auto_incremental_review: false
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+  path_filters:
+    - "!**/.venv/**"
+    - "!**/node_modules/**"
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!**/dist/**"
+    - "!**/*.min.js"
+    - "!**/migrations/**"
+
+chat:
+  auto_reply: true
+
+tone_instructions: "Healthcare company (HIPAA/SOC 2). Prioritize PHI/PII protection, security (auth, injection, tenant isolation), and correctness. Skip style nitpicks caught by linters."
