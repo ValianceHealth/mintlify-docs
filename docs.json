@@ -106,6 +106,7 @@
             "group": "Gateway",
             "openapi": "api/openapi-commercial.yaml",
             "pages": [
+              "api/models",
               "POST /api/v1/llm/chat/completions",
               "POST /api/v1/redact/"
             ]
