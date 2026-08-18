@@ -96,9 +96,18 @@
           {
             "group": "Get started",
             "pages": [
+              "api/introduction",
               "api/authentication",
               "api/errors-and-limits",
               "api/redaction-receipts"
+            ]
+          },
+          {
+            "group": "Gateway",
+            "openapi": "api/openapi-commercial.yaml",
+            "pages": [
+              "POST /api/v1/llm/chat/completions",
+              "POST /api/v1/redact/"
             ]
           },
           {
@@ -119,14 +128,6 @@
               "POST /api/v1/search/",
               "GET /api/v1/search/domains/",
               "GET /api/v1/search/vocabularies/"
-            ]
-          },
-          {
-            "group": "Gateway",
-            "openapi": "api/openapi-commercial.yaml",
-            "pages": [
-              "POST /api/v1/llm/chat/completions",
-              "POST /api/v1/redact/"
             ]
           }
         ]

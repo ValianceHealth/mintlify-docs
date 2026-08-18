@@ -1,0 +1,44 @@
+---
+title: "Introduction"
+description: "How the PHI-safe gateway works: your data is de-identified before any model sees it, and every request proves it."
+---
+
+Every LLM-bound request passes through the PHI-safe gateway. The gateway removes patient identifiers **server-side, before** the text reaches any model, and restores them **after** the response returns. Your application sends and receives normal text; the model only ever sees placeholders.
+
+## How a request flows
+
+```mermaid
+flowchart TB
+    A["Your application\nPOST /api/v1/llm/chat/completions"] --> B["Redaction engine\nDetects PHI, swaps in placeholders\n(names, ICs, MRNs, dates, locations)"]
+    B -->|"Text with placeholders only"| C["PHI-approved LLM\nAPAC-bounded hosting"]
+    C -->|"Response with placeholders"| D["Re-hydration\nPlaceholders swapped back to originals"]
+    D --> E["Response to your application\n+ redaction receipt"]
+    B -. "mapping held in memory\nfor this request only" .-> D
+```
+
+## What the gateway guarantees
+
+<CardGroup cols={2}>
+  <Card title="Fail-closed" icon="shield">
+    If the redaction engine is unavailable, the request fails with a `503`. Un-redacted text is never forwarded.
+  </Card>
+  <Card title="Redaction receipts" icon="receipt">
+    Every response carries a receipt: what was detected, what was replaced, and which model served the request. See [Redaction receipts](/api/redaction-receipts).
+  </Card>
+  <Card title="No retention" icon="database">
+    With `persist_bodies=false`, request and response bodies are not stored. The placeholder mapping lives in memory for the single request only.
+  </Card>
+  <Card title="Bounded residency" icon="globe">
+    PHI-bearing traffic is served only by models on approved, APAC-bounded infrastructure. Models without that approval refuse PHI traffic.
+  </Card>
+</CardGroup>
+
+## Standalone redaction
+
+If you only need de-identification, call [`POST /api/v1/redact`](/api-reference). It returns the redacted text **and the mapping** to you, and stores neither.
+
+## Where to go next
+
+1. Get a key and pick a header style: [Authentication](/api/authentication).
+2. Read the error and rate-limit contract: [Errors & limits](/api/errors-and-limits).
+3. Call the gateway with any OpenAI-compatible SDK pointed at `.../api/v1/llm`.
