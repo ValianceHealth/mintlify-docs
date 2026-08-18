@@ -235,9 +235,13 @@ paths:
         \ has your values substituted back. The mapping\nlives only in the request's memory and is never\
         \ stored.\n\nEvery response carries `redaction_receipt`, including `rehydration_complete`\nand\
         \ `unresolved_placeholder_count` — if the model altered our placeholders, the\nreceipt says so\
-        \ rather than returning residue silently.\n\n**Not supported in v1** (refused, not silently dropped):\
-        \ streaming while\nre-hydrating (`stream` with `redact_only=false`), non-text content parts,\n\
-        and tool/function calling.\n    "
+        \ rather than returning residue silently.\n\n**Tool calling** is supported: send OpenAI-style\
+        \ `tools`, receive `tool_calls`\nwith your values re-hydrated. Your `tool` role results are redacted\
+        \ on the way\nout like any other message, and so are the arguments of an assistant turn you\n\
+        send back.\n\n**Not supported** (refused, not silently dropped): streaming while re-hydrating\n\
+        (`stream` with `redact_only=false`), tools combined with `stream`, non-text\ncontent parts, forcing\
+        \ a specific tool via `tool_choice`, and the deprecated\n`functions`/`function_call` form.\n \
+        \   "
       summary: PHI-safe chat completion (OpenAI-compatible)
       tags:
       - Gateway
@@ -579,6 +583,17 @@ components:
           description: Return the model's answer WITHOUT substituting your values back (placeholders remain).
             Required if you want streaming, and useful when the answer is going somewhere that should
             not hold PHI.
+        tools:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: OpenAI-style function tools. Forwarded to the model; returned tool_calls come back
+            with your values re-hydrated.
+        tool_choice:
+          description: '"auto" (default) or "none". Forcing a specific call ("required", or a named function)
+            is refused rather than downgraded to "auto", so a forced call never appears to have been honoured
+            when it was not.'
         conversation_key:
           type: string
           description: Supply the same value across turns so a given person keeps the same placeholder;
@@ -594,21 +609,35 @@ components:
           $ref: '#/components/schemas/ChatMessageRoleEnum'
         content:
           type: string
+          nullable: true
           maxLength: 100000
+        tool_calls:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        tool_call_id:
+          type: string
+          minLength: 1
+          description: 'Required on a `tool` message: it matches the result to the call that asked for
+            it.'
+          maxLength: 200
       required:
-      - content
       - role
     ChatMessageRoleEnum:
       enum:
       - system
       - user
       - assistant
+      - tool
       type: string
       description: '* `system` - system
 
         * `user` - user
 
-        * `assistant` - assistant'
+        * `assistant` - assistant
+
+        * `tool` - tool'
     DRGAgentRequestRequest:
       type: object
       description: Request serializer for the DRG AI agent endpoint.
