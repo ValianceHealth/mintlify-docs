@@ -5,6 +5,24 @@ description: "How the PHI-safe gateway works: your data is de-identified before 
 
 Every LLM-bound request passes through the PHI-safe gateway. The gateway removes patient identifiers **server-side, before** the text reaches any model, and restores them **after** the response returns. Your application sends and receives normal text; the model only ever sees placeholders.
 
+## Why this exists
+
+Clinical text is regulated personal data. A direct call to a general LLM API discloses that data to servers you cannot name — and most healthcare data-protection duties do not allow that.
+
+- **PDPA (Malaysia).** The Personal Data Protection Act 2010 restricts cross-border transfer of personal data: disclosures must go to destinations you can name and justify, and processors carry binding security duties. A generic LLM endpoint satisfies neither.
+- **HIPAA (US).** Protected Health Information may only reach vendors under a Business Associate Agreement with strict safeguards. De-identified data falls outside that restriction.
+- **GDPR and similar regimes.** The same pattern: special-category health data, transfer restrictions, processor obligations.
+
+The gateway resolves this by changing **what leaves**, not by asking you to trust where it goes:
+
+1. Identifiers are stripped server-side before any model call — the model receives de-identified text.
+2. Traffic that could carry PHI runs only on **named, APAC-bounded infrastructure**, so the destination is specific and auditable.
+3. The [redaction receipt](/api/redaction-receipts) on every response is your audit evidence of both.
+
+<Note>
+The gateway supports your compliance program; it does not replace it. Your organization remains responsible for its own regulatory assessment.
+</Note>
+
 ## How a request flows
 
 ```mermaid
