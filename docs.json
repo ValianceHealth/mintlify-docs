@@ -107,6 +107,7 @@
             "openapi": "api/openapi-commercial.yaml",
             "pages": [
               "api/models",
+              "api/tool-calling",
               "POST /api/v1/llm/chat/completions",
               "POST /api/v1/redact/"
             ]
