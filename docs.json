@@ -41,7 +41,9 @@
         "groups": [
           {
             "group": "Overview",
-            "pages": ["index"]
+            "pages": [
+              "index"
+            ]
           },
           {
             "group": "Getting Started",
@@ -63,19 +65,69 @@
           },
           {
             "group": "AI",
-            "pages": ["ai/workspaces"]
+            "pages": [
+              "ai/workspaces"
+            ]
           },
           {
             "group": "API",
-            "pages": ["api/overview"]
+            "pages": [
+              "api/overview"
+            ]
           },
           {
             "group": "Help",
-            "pages": ["faq", "support"]
+            "pages": [
+              "faq",
+              "support"
+            ]
           },
           {
             "group": "Release Notes",
-            "pages": ["release-notes/index"]
+            "pages": [
+              "release-notes/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "api/authentication",
+              "api/errors-and-limits",
+              "api/redaction-receipts"
+            ]
+          },
+          {
+            "group": "DRG",
+            "openapi": "api/openapi-commercial.yaml",
+            "pages": [
+              "POST /api/v1/drg/classify/",
+              "POST /api/v1/drg/agent/",
+              "POST /api/v1/drg/batch/",
+              "GET /api/v1/drg/batch/{job_id}/",
+              "POST /api/v1/fhir/drg/$classify"
+            ]
+          },
+          {
+            "group": "Vocabulary",
+            "openapi": "api/openapi-commercial.yaml",
+            "pages": [
+              "POST /api/v1/search/",
+              "GET /api/v1/search/domains/",
+              "GET /api/v1/search/vocabularies/"
+            ]
+          },
+          {
+            "group": "Gateway",
+            "openapi": "api/openapi-commercial.yaml",
+            "pages": [
+              "POST /api/v1/llm/chat/completions",
+              "POST /api/v1/redact/"
+            ]
           }
         ]
       }
@@ -102,11 +154,25 @@
       {
         "header": "Company",
         "items": [
-          { "label": "Security", "href": "https://valiancehealth.com/security" },
-          { "label": "Privacy Policy", "href": "https://valiancehealth.com/privacy-policy" },
-          { "label": "Terms of Service", "href": "https://valiancehealth.com/terms-of-service" }
+          {
+            "label": "Security",
+            "href": "https://valiancehealth.com/security"
+          },
+          {
+            "label": "Privacy Policy",
+            "href": "https://valiancehealth.com/privacy-policy"
+          },
+          {
+            "label": "Terms of Service",
+            "href": "https://valiancehealth.com/terms-of-service"
+          }
         ]
       }
     ]
+  },
+  "api": {
+    "playground": {
+      "display": "simple"
+    }
   }
 }

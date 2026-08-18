@@ -1,0 +1,76 @@
+---
+title: "Errors and limits"
+description: "What each status code means, what to do about it, and the headers that tell you when to retry."
+---
+
+Status codes on this surface are honest: each one means a distinct thing, and the
+body says which.
+
+| Code | Meaning | Your move |
+|---|---|---|
+| **401** | key invalid, expired, or revoked | check the key; rotate if you believe it leaked |
+| **403** | valid key, endpoint not permitted — the body says whether it was the surface or the scopes | request the scope. **Do not rotate keys** |
+| **429** | rate limit, monthly request limit, or spend cap — the body names which | back off per the headers below |
+| **503** `redaction_failed_closed` | our redactor failed, so the request was refused **before any model saw it** | retry. This is fail-closed by design |
+
+<Note>
+  **A 403 is never a credential problem here.** On many APIs an authorization
+  failure arrives as a 401 and integrators rotate keys forever trying to fix it.
+  A 403 from this surface means your key is fine and lacks access to that
+  endpoint — so the fix is a conversation, not a new key.
+</Note>
+
+## Retrying a 429
+
+Every 429 carries:
+
+- `Retry-After` — seconds to wait
+- `X-RateLimit-Limit` / `X-RateLimit-Remaining`
+- `X-RateLimit-Reset` — epoch seconds
+
+Rate limits are **per key**, with separate budgets per endpoint class, so your
+batch traffic cannot starve your interactive traffic.
+
+Three different things return 429, and the body distinguishes them:
+
+<AccordionGroup>
+  <Accordion title="Rate limit">
+    Short-window throttling. Honour `Retry-After` and continue.
+  </Accordion>
+
+  <Accordion title="Monthly request limit">
+    Counts only your API-key requests, never our internal traffic.
+    `X-RateLimit-Reset` is the start of next month, UTC.
+  </Accordion>
+
+  <Accordion title="Spend cap (`spend_limit_reached`)">
+    LLM-backed endpoints stop at your organization's spend limit rather than
+    billing past it. Raise the cap with us; retrying will not clear it.
+  </Accordion>
+</AccordionGroup>
+
+## Request IDs
+
+**Every response carries `X-Request-Id`**, and error bodies echo it as
+`request_id`. Include it in any support request: it joins your call to our logs
+and to the exact billing ledger row in one lookup.
+
+You may also send your own `X-Request-Id` — 8 to 64 characters of
+`[A-Za-z0-9._-]` — and we will echo it back.
+
+## Latency: measured, not promised
+
+| Path | Typical | Under concurrency |
+|---|---|---|
+| `/drg/classify/` (deterministic) | tens of ms | tens of ms |
+| LLM-backed endpoints | 3.5–6 s median | **p95 45–85 s** |
+
+The p95 comes from upstream model throttling rather than our compute, which is
+why it is quoted as an observation rather than a guarantee.
+
+<Warning>
+  **Set client timeouts on LLM-backed endpoints to 120 s or more.** A 30-second
+  timeout will fire on healthy requests under concurrency. If you use an
+  OpenAI-compatible SDK against the gateway, its built-in backoff already
+  engages on our 429s, because the errors arrive OpenAI-shaped.
+</Warning>

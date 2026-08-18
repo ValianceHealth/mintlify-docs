@@ -1,0 +1,80 @@
+---
+title: "Authentication"
+description: "How to present your API key, what scopes narrow, and how rotation works."
+---
+
+Your key is issued by Valiance Health, prefixed `hpx_`, and shown **once** at issuance.
+
+## Two ways to present the same key
+
+<CardGroup cols={2}>
+  <Card title="X-API-Key header" icon="key">
+    ```
+    X-API-Key: hpx_...
+    ```
+
+    Works on every endpoint in this reference.
+  </Card>
+  <Card title="Authorization: Bearer" icon="robot">
+    ```
+    Authorization: Bearer hpx_...
+    ```
+
+    For the LLM gateway, so **OpenAI-compatible SDKs work unmodified**.
+  </Card>
+</CardGroup>
+
+```bash Deterministic DRG classification
+curl -X POST https://api.v2.healthproximate.com/api/v1/drg/classify/ \
+  -H "X-API-Key: hpx_..." \
+  -H "Content-Type: application/json" \
+  -d '{"dx_codes": ["A41.9", "J96.01"], "pr_codes": [], "gender": "F", "is_alive": true}'
+```
+
+```python PHI-safe chat, through the OpenAI SDK
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://api.v2.healthproximate.com/api/v1/llm",
+    api_key="hpx_...",           # sent as a Bearer token
+)
+client.chat.completions.create(model="<model>", messages=[...])
+```
+
+## Scopes
+
+A key may be issued with scopes that narrow which endpoints it can reach:
+`drg:classify`, `llm:chat`, `redact`, `search`.
+
+An out-of-scope call returns **403**, and the body names the scopes your key
+holds. That is a request for access, not a reason to rotate the key.
+
+## Rotation, expiry and sandbox keys
+
+<AccordionGroup>
+  <Accordion title="Rotate without downtime">
+    Your organization can hold two active keys at once. Request a new key,
+    migrate your traffic, then we revoke the old one. Revocation takes effect on
+    the very next request and is audit-logged.
+  </Accordion>
+
+  <Accordion title="Expiry">
+    Pilot keys expire — 12 months by default. Ask us before expiry; a lapsed key
+    fails closed with a 401 rather than degrading.
+  </Accordion>
+
+  <Accordion title="Sandbox keys">
+    For integration testing: metered but never invoiced, with a separate small
+    spend allowance, so a test loop can neither bill you nor block your
+    production key.
+
+    **Synthetic data only.** A sandbox key carries the same PHI handling as a
+    production one, but the allowance is not sized for real workloads.
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  Treat keys as secrets. Store them in environment variables or a secrets
+  manager, never in version control. Contact support to rotate a key you believe
+  is exposed.
+</Warning>
