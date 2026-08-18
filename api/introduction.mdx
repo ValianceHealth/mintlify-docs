@@ -9,8 +9,8 @@ Every LLM-bound request passes through the PHI-safe gateway. The gateway removes
 
 Clinical text is regulated personal data. A direct call to a general LLM API discloses that data to servers you cannot name — and most healthcare data-protection duties do not allow that.
 
-- **PDPA (Malaysia).** The Personal Data Protection Act 2010 restricts cross-border transfer of personal data: disclosures must go to destinations you can name and justify, and processors carry binding security duties. A generic LLM endpoint satisfies neither.
-- **HIPAA (US).** Protected Health Information may only reach vendors under a Business Associate Agreement with strict safeguards. De-identified data falls outside that restriction.
+- **PDPA (Malaysia).** The Personal Data Protection Act 2010 restricts cross-border transfer of personal data: disclosures must go to destinations you can name and justify, and processors carry binding security duties. We document this in a Transfer Impact Assessment (TIA): a formal record of where the data goes, what protection applies there, and why the transfer is justified. A generic LLM endpoint satisfies none of this.
+- **HIPAA (US).** Protected Health Information may only reach vendors under a Business Associate Agreement (BAA). A BAA is a contract that makes the vendor legally responsible for safeguarding PHI: required security controls, breach notification duties, limits on use and further disclosure, and return-or-destroy obligations at contract end. Without a signed BAA, sending PHI to a vendor is itself a HIPAA violation — no matter how secure the vendor is. The gateway's model endpoints run on HIPAA-eligible infrastructure covered by such agreements, and de-identified data falls outside the restriction entirely.
 - **GDPR and similar regimes.** The same pattern: special-category health data, transfer restrictions, processor obligations.
 
 The gateway resolves this by changing **what leaves**, not by asking you to trust where it goes:
@@ -28,7 +28,7 @@ The gateway supports your compliance program; it does not replace it. Your organ
 ```mermaid
 flowchart TB
     A["Your application\nPOST /api/v1/llm/chat/completions"] --> B["Redaction engine\nDetects PHI, swaps in placeholders\n(names, ICs, MRNs, dates, locations)"]
-    B -->|"Text with placeholders only"| C["PHI-approved LLM\nAPAC-bounded hosting"]
+    B -->|"Text with placeholders only"| C["LLM endpoints\nPDPA-compliant with TIA\nHIPAA-compliant endpoints"]
     C -->|"Response with placeholders"| D["Re-hydration\nPlaceholders swapped back to originals"]
     D --> E["Response to your application\n+ redaction receipt"]
     B -. "mapping held in memory\nfor this request only" .-> D
