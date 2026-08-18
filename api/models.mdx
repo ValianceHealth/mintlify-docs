@@ -34,7 +34,7 @@ curl https://api.v2.healthproximate.com/api/v1/llm/chat/completions \
 Every model on this list has a completed destination assessment: we can tell you — and your regulator — exactly which infrastructure processes the request. Frontier models on `global` inference profiles may route through US regions, so they do not qualify, no matter how capable they are.
 
 <Info>
-  **Roadmap.** Additional APAC-resident models (including open-weight OpenAI models served from Tokyo) are under assessment. They join this list when their transfer assessment completes — not before.
+  **In rollout.** OpenAI models on Azure endpoints, under our Microsoft Azure BAA, are being onboarded — along with additional APAC-resident models such as open-weight OpenAI models served from Tokyo. A model joins the table above when the gateway routes it and its destination assessment is complete. Until then, requests for it return `model_not_allowed`.
 </Info>
 
 ## Errors you may see
