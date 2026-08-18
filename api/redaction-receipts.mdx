@@ -1,0 +1,89 @@
+---
+title: "Redaction receipts"
+description: "What is removed before a model sees your text, what is deliberately kept, and how each response proves it."
+---
+
+Every LLM-backed endpoint redacts your text **server-side before any model sees
+it**, restores your real values in the answer, and attaches a receipt.
+
+## What is removed, and what is kept
+
+<Columns cols={2}>
+  <Card title="Replaced with placeholders" icon="eye-slash">
+    Malaysian IC (old and new formats), MRN, passport, phone, names, emails,
+    account numbers.
+  </Card>
+  <Card title="Deliberately preserved" icon="stethoscope">
+    Ages, relative dates like "day 3 post-op", vitals, dosages — all clinical
+    content.
+  </Card>
+</Columns>
+
+This is not blanket scrubbing, and the distinction is the point: an answer built
+on redacted clinical detail would be worthless. The model receives placeholders
+for who the patient is, and the full clinical picture of what happened.
+
+The placeholder→value mapping lives in **the request's memory only** and is never
+stored.
+
+## The receipt
+
+Every LLM-backed response carries a `redaction_receipt`:
+
+<ResponseField name="entities_redacted" type="object">
+  What was found, by type — **counts only, never the values**.
+</ResponseField>
+
+<ResponseField name="rehydration_complete" type="boolean">
+  Whether every placeholder was substituted back.
+</ResponseField>
+
+<ResponseField name="unresolved_placeholder_count" type="integer">
+  How many were not. If a model altered one of our placeholders, the receipt says
+  so rather than silently handing you residue.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `failed_closed` on the 503 below — the request never left us.
+</ResponseField>
+
+## Fail-closed
+
+<Warning>
+  **If the redactor fails, the request is refused with a 503
+  (`redaction_failed_closed`).** It never reaches a model unredacted.
+
+  A redactor outage therefore looks like downtime rather than like a silent leak.
+  That is the intended trade.
+</Warning>
+
+There is **no client-side flag that skips redaction** for API keys. You cannot
+assert "this text is already de-identified" to bypass it.
+
+## Two v1 limits, both refusals rather than silent degradation
+
+<AccordionGroup>
+  <Accordion title="Streaming while re-hydrating is refused">
+    Placeholders split across chunk boundaries, and models rewrite them
+    mid-stream, so a half-substituted answer is worse than a slower complete one.
+
+    Send `redact_only=true` to stream — nothing is substituted back, so there is
+    nothing to split.
+  </Accordion>
+
+  <Accordion title="Tool and function calling is refused">
+    A tool call can carry context straight back out, which needs its own
+    exfiltration review. Refused with a 400 rather than dropped, so you never
+    believe your tools were honoured when they were not.
+  </Accordion>
+</AccordionGroup>
+
+## Measured recall
+
+On a held-out corpus the engine's authors never saw: **99.5% name recall** and
+**100% structured-identifier recall**.
+
+Read those two numbers precisely. They are the current measurement. Our CI
+re-measures on every change to the redactor and enforces floors of **≥95% names**
+and **≥99% structured identifiers** — the floors are what a change cannot ship
+below, not what we claim today.
