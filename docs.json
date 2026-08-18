@@ -9,7 +9,7 @@
     "dark": "#155DFC"
   },
   "fonts": {
-    "family": "Instrument Sans"
+    "family": "Geist"
   },
   "background": {
     "color": {
@@ -26,7 +26,7 @@
     "appearance": "dark",
     "background": "/images/og-background.png",
     "fonts": {
-      "family": "Instrument Sans"
+      "family": "Geist"
     }
   },
   "seo": {
