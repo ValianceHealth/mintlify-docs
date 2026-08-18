@@ -1,21 +1,56 @@
 ---
 title: "Models"
-description: "Which models the gateway serves, where they run, and why the list is short on purpose."
+description: "The full model catalog the gateway serves, grouped by provider, with the residency of every destination."
 ---
 
-The gateway routes only models that pass a **PHI clearance**: a named, assessed destination with contractual safeguards (AWS BAA), bounded to APAC regions. Requesting any other model returns a `403` with `code: "model_not_allowed"` — that refusal is the product working, not a limitation.
-
-## Available models
-
-| Model ID | Tier | Residency | Best for |
-| --- | --- | --- | --- |
-| `apac.amazon.nova-pro-v1:0` | Standard (default) | APAC-bounded, 10 `ap-*` regions | General clinical text work |
-| `apac.amazon.nova-lite-v1:0` | Light | APAC-bounded, 10 `ap-*` regions | High-volume, cost-sensitive work |
-| `apac.amazon.nova-micro-v1:0` | Micro | APAC-bounded, 10 `ap-*` regions | Classification, extraction, short tasks |
-
-All three run on AWS Bedrock `apac` inference profiles. The verified routing set is: `ap-southeast-1..5`, `ap-northeast-1..3`, `ap-south-1..2`. **No US, no EU.** They serve under the standard AWS Business Associate Agreement with no third-party inference host in the path.
+The gateway serves models from five providers. Every destination is **named and assessed**: our PDPA Transfer Impact Assessment is complete, and inference runs under our signed BAAs (AWS and Microsoft Azure). Whatever model you pick, the redaction path is identical — identifiers never reach the model.
 
 If you omit `model`, the gateway uses `apac.amazon.nova-pro-v1:0`.
+
+## Amazon
+
+| Model ID | Tier | Residency |
+| --- | --- | --- |
+| `apac.amazon.nova-pro-v1:0` | Standard (default) | APAC-bounded, 10 `ap-*` regions |
+| `apac.amazon.nova-lite-v1:0` | Light | APAC-bounded, 10 `ap-*` regions |
+| `apac.amazon.nova-micro-v1:0` | Micro | APAC-bounded, 10 `ap-*` regions |
+
+Bedrock `apac` inference profiles. Verified routing set: `ap-southeast-1..5`, `ap-northeast-1..3`, `ap-south-1..2`. No US, no EU.
+
+## Anthropic
+
+| Model ID | Tier | Residency |
+| --- | --- | --- |
+| `global.anthropic.claude-sonnet-5` | Frontier | Cross-region global profile (may include US) |
+| `global.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast | Cross-region global profile (may include US) |
+
+Served on AWS Bedrock under the AWS BAA. Global profiles route cross-region; the routing disclosure is part of the assessed destination.
+
+## OpenAI
+
+| Model ID | Tier | Residency |
+| --- | --- | --- |
+| `gpt-5.5` | Frontier | Azure endpoints under the Microsoft BAA |
+| `gpt-5.6-luna` | Frontier | Azure endpoints under the Microsoft BAA |
+| `gpt-5.6-sol` | Frontier | Azure endpoints under the Microsoft BAA |
+| `openai.gpt-oss-120b-1:0` | Open-weight | APAC (`ap-northeast-1`, Tokyo) |
+| `openai.gpt-oss-20b-1:0` | Open-weight, fast | APAC (`ap-northeast-1`, Tokyo) |
+
+The GPT-5.x family speaks the OpenAI Responses dialect; the gateway routes it by model ID, so your request format does not change. The open-weight `gpt-oss` models run on AWS Bedrock in Tokyo.
+
+## DeepSeek
+
+| Model ID | Tier | Residency |
+| --- | --- | --- |
+| `deepseek.v3.2` | Reasoning | APAC (`ap-northeast-1`, Tokyo) |
+
+## MiniMax
+
+| Model ID | Tier | Residency |
+| --- | --- | --- |
+| `minimax.minimax-m2.5` | Reasoning | APAC (`ap-northeast-1`, Tokyo) |
+
+Note: this model emits reasoning tokens billed as output, so its cost per task runs above its per-token rate card.
 
 ## Choosing a model
 
@@ -24,24 +59,20 @@ curl https://api.v2.healthproximate.com/api/v1/llm/chat/completions \
   -H "Authorization: Bearer hpx_..." \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "apac.amazon.nova-lite-v1:0",
+    "model": "global.anthropic.claude-sonnet-5",
     "messages": [{"role": "user", "content": "Summarize this discharge note: ..."}]
   }'
 ```
 
-## Why the list is short
-
-Every model on this list has a completed destination assessment: we can tell you — and your regulator — exactly which infrastructure processes the request. Frontier models on `global` inference profiles may route through US regions, so they do not qualify, no matter how capable they are.
-
 <Info>
-  **In rollout.** OpenAI models on Azure endpoints, under our Microsoft Azure BAA, are being onboarded — along with additional APAC-resident models such as open-weight OpenAI models served from Tokyo. A model joins the table above when the gateway routes it and its destination assessment is complete. Until then, requests for it return `model_not_allowed`.
+  **Per-organization clearance.** Your contract can restrict the menu — for example, APAC-resident models only. In that case, models outside your clearance return `403` with `code: "model_not_allowed"`.
 </Info>
 
 ## Errors you may see
 
 | Status | Code | Meaning |
 | --- | --- | --- |
-| `403` | `model_not_allowed` | The requested model is not PHI-cleared for external traffic. Pick a model from the table above. |
+| `403` | `model_not_allowed` | The model is outside your organization's clearance. Pick a model from your cleared set. |
 | `503` | — | The redaction engine is unavailable. The gateway fails closed rather than forward un-redacted text. |
 
 See [Errors & limits](/api/errors-and-limits) for the full error contract.
