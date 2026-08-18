@@ -51,6 +51,41 @@ flowchart TB
   </Card>
 </CardGroup>
 
+## Quickstart
+
+The gateway is OpenAI-compatible. Point any OpenAI SDK at `.../api/v1/llm` and it works unmodified:
+
+<CodeGroup>
+
+```python Python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://api.v2.healthproximate.com/api/v1/llm",
+    api_key="hpx_...",  # your Healthproximate API key
+)
+
+response = client.chat.completions.create(
+    model="apac.amazon.nova-pro-v1:0",
+    messages=[{"role": "user", "content": "Summarize: Patient Ahmad bin Ali, IC 800101-14-5555, admitted for pneumonia..."}],
+)
+print(response.choices[0].message.content)
+```
+
+```bash curl
+curl https://api.v2.healthproximate.com/api/v1/llm/chat/completions \
+  -H "Authorization: Bearer hpx_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "apac.amazon.nova-pro-v1:0",
+    "messages": [{"role": "user", "content": "Summarize: Patient Ahmad bin Ali, IC 800101-14-5555, admitted for pneumonia..."}]
+  }'
+```
+
+</CodeGroup>
+
+The name and IC number in that prompt never reach the model — the redaction engine replaces them before the model call and restores them in the response. The receipt on the response proves it. See [Models](/api/models) for the full model list.
+
 ## Standalone redaction
 
 If you only need de-identification, call [`POST /api/v1/redact`](/api-reference). It returns the redacted text **and the mapping** to you, and stores neither.

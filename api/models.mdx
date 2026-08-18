@@ -1,0 +1,47 @@
+---
+title: "Models"
+description: "Which models the gateway serves, where they run, and why the list is short on purpose."
+---
+
+The gateway routes only models that pass a **PHI clearance**: a named, assessed destination with contractual safeguards (AWS BAA), bounded to APAC regions. Requesting any other model returns a `403` with `code: "model_not_allowed"` — that refusal is the product working, not a limitation.
+
+## Available models
+
+| Model ID | Tier | Residency | Best for |
+| --- | --- | --- | --- |
+| `apac.amazon.nova-pro-v1:0` | Standard (default) | APAC-bounded, 10 `ap-*` regions | General clinical text work |
+| `apac.amazon.nova-lite-v1:0` | Light | APAC-bounded, 10 `ap-*` regions | High-volume, cost-sensitive work |
+| `apac.amazon.nova-micro-v1:0` | Micro | APAC-bounded, 10 `ap-*` regions | Classification, extraction, short tasks |
+
+All three run on AWS Bedrock `apac` inference profiles. The verified routing set is: `ap-southeast-1..5`, `ap-northeast-1..3`, `ap-south-1..2`. **No US, no EU.** They serve under the standard AWS Business Associate Agreement with no third-party inference host in the path.
+
+If you omit `model`, the gateway uses `apac.amazon.nova-pro-v1:0`.
+
+## Choosing a model
+
+```bash
+curl https://api.v2.healthproximate.com/api/v1/llm/chat/completions \
+  -H "Authorization: Bearer hpx_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "apac.amazon.nova-lite-v1:0",
+    "messages": [{"role": "user", "content": "Summarize this discharge note: ..."}]
+  }'
+```
+
+## Why the list is short
+
+Every model on this list has a completed destination assessment: we can tell you — and your regulator — exactly which infrastructure processes the request. Frontier models on `global` inference profiles may route through US regions, so they do not qualify, no matter how capable they are.
+
+<Info>
+  **Roadmap.** Additional APAC-resident models (including open-weight OpenAI models served from Tokyo) are under assessment. They join this list when their transfer assessment completes — not before.
+</Info>
+
+## Errors you may see
+
+| Status | Code | Meaning |
+| --- | --- | --- |
+| `403` | `model_not_allowed` | The requested model is not PHI-cleared for external traffic. Pick a model from the table above. |
+| `503` | — | The redaction engine is unavailable. The gateway fails closed rather than forward un-redacted text. |
+
+See [Errors & limits](/api/errors-and-limits) for the full error contract.
