@@ -1,11 +1,11 @@
 ---
 title: "Models"
-description: "The full model catalog the gateway serves, grouped by provider, with the processor and destination of every model."
+description: "The full model catalog the gateway serves, grouped by provider, with the processor and assessment status of every model."
 ---
 
-The gateway serves models from five providers. Every model runs under a signed BAA — AWS or Microsoft — and every destination is named below. Whatever model you pick, the redaction path is identical: identifiers never reach the model.
+The gateway serves models from five providers. Every model runs under a signed BAA — AWS or Microsoft. Whatever model you pick, the redaction path is identical: identifiers never reach the model.
 
-**You choose your destination by choosing your model.** Each table below names the processor (who handles the data, under which agreement) and the destination (which regions may actually process it). If your contract requires APAC-resident processing, we restrict your organization's clearance to models that meet it, and anything outside returns `403` with `code: "model_not_allowed"`. Ask us and we will set it.
+**Where each model processes your data is covered by our PDPA Transfer Impact Assessment**, which names every destination. We share it under NDA — ask us, and ask before you build against a model if residency is a requirement for you. Your contract then sets which models your organization may call, and anything outside that clearance returns `403` with `code: "model_not_allowed"`.
 
 If you omit `model`, the gateway uses `apac.amazon.nova-pro-v1:0`.
 
@@ -13,65 +13,49 @@ Every model in this catalog supports [tool calling](/api/tool-calling). Models w
 
 ## Amazon
 
-| Model ID | Tier |
-| --- | --- |
-| `apac.amazon.nova-pro-v1:0` | Standard (default) |
-| `apac.amazon.nova-lite-v1:0` | Light |
-| `apac.amazon.nova-micro-v1:0` | Micro |
+| Model ID | Tier | Processor | Transfer assessment |
+| --- | --- | --- | --- |
+| `apac.amazon.nova-pro-v1:0` | Standard (default) | AWS Bedrock — BAA, HIPAA-aligned | Complete |
+| `apac.amazon.nova-lite-v1:0` | Light | AWS Bedrock — BAA, HIPAA-aligned | Complete |
+| `apac.amazon.nova-micro-v1:0` | Micro | AWS Bedrock — BAA, HIPAA-aligned | Complete |
 
-Bedrock `apac` inference profiles. The routing set was verified from `ap-southeast-5` with `aws bedrock get-inference-profile`, and is these ten regions and no others:
-
-`ap-southeast-1`, `ap-southeast-2`, `ap-southeast-3`, `ap-southeast-4`, `ap-southeast-5`, `ap-northeast-1`, `ap-northeast-2`, `ap-northeast-3`, `ap-south-1`, `ap-south-2`.
-
-No US. No EU.
-
-<Note>
-  **APAC-bounded is not Malaysia-only.** Your requests enter AWS in Malaysia (`ap-southeast-5`) — that is our account and our entry region. The inference profile may then serve any of the ten regions above. AWS offers no single-region option for these models: every foundation model in `ap-southeast-5` is inference-profile-only, and the only Nova profiles there are the `apac.*` ones. If your contract requires in-country-only processing, tell us — it needs a different arrangement, and we would rather scope it than have you assume it.
-</Note>
+The default family, and the one with a completed assessment. Pick these unless you have a reason not to.
 
 ## Anthropic
 
-| Model ID | Tier |
-| --- | --- |
-| `global.anthropic.claude-opus-5` | Frontier (most capable) |
-| `global.anthropic.claude-sonnet-5` | Frontier |
-| `global.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast |
+| Model ID | Tier | Processor | Transfer assessment |
+| --- | --- | --- | --- |
+| `global.anthropic.claude-opus-5` | Frontier (most capable) | AWS Bedrock — BAA, HIPAA-aligned | Complete |
+| `global.anthropic.claude-sonnet-5` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete |
+| `global.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast | AWS Bedrock — BAA, HIPAA-aligned | Complete |
 
-Same AWS account, same BAA, same Malaysia entry region as the Nova family. The difference is the profile: these are `global.*` profiles, which AWS documents as routing "globally across all supported AWS Regions", so the processing region is not bounded.
-
-If you need a bounded destination, pick the Nova family, or ask us to restrict your clearance.
+Same AWS account and BAA as the Nova family.
 
 ## OpenAI
 
-| Model ID | Tier |
-| --- | --- |
-| `gpt-5.5` | Frontier |
-| `gpt-5.6-luna` | Frontier |
-| `gpt-5.6-sol` | Frontier |
-| `openai.gpt-oss-120b-1:0` | Open-weight |
-| `openai.gpt-oss-20b-1:0` | Open-weight, fast |
+| Model ID | Tier | Processor | Transfer assessment |
+| --- | --- | --- | --- |
+| `gpt-5.5` | Frontier | Azure AI Foundry — Microsoft BAA | Open |
+| `gpt-5.6-luna` | Frontier | Azure AI Foundry — Microsoft BAA | Open |
+| `gpt-5.6-sol` | Frontier | Azure AI Foundry — Microsoft BAA | Open |
+| `openai.gpt-oss-120b-1:0` | Open-weight | AWS Bedrock — BAA, HIPAA-aligned | Open |
+| `openai.gpt-oss-20b-1:0` | Open-weight, fast | AWS Bedrock — BAA, HIPAA-aligned | Open |
 
 The GPT-5.x family speaks the OpenAI Responses dialect; the gateway routes it by model ID, so your request format does not change.
 
-The open-weight `gpt-oss` models run on AWS Bedrock in Tokyo — a cross-border transfer from Malaysia, though it stays within APAC.
-
 ## DeepSeek
 
-| Model ID | Tier |
-| --- | --- |
-| `deepseek-v4-pro` | Frontier reasoning |
-| `deepseek-v4-flash` | Fast |
-| `deepseek.v3.2` | Reasoning |
-
-V4 Pro and V4 Flash serve from Azure AI Foundry deployments. V3.2 runs on AWS Bedrock; it is also served from `ap-northeast-1`, but the region we call today is `us-west-2`.
+| Model ID | Tier | Processor | Transfer assessment |
+| --- | --- | --- | --- |
+| `deepseek-v4-pro` | Frontier reasoning | Azure AI Foundry — Microsoft BAA | Open |
+| `deepseek-v4-flash` | Fast | Azure AI Foundry — Microsoft BAA | Open |
+| `deepseek.v3.2` | Reasoning | AWS Bedrock — BAA, HIPAA-aligned | Open |
 
 ## MiniMax
 
-| Model ID | Tier |
-| --- | --- |
-| `minimax.minimax-m2.5` | Reasoning |
-
-Runs on AWS Bedrock; also served from `ap-northeast-1`, but the region we call today is `us-west-2`.
+| Model ID | Tier | Processor | Transfer assessment |
+| --- | --- | --- | --- |
+| `minimax.minimax-m2.5` | Reasoning | AWS Bedrock — BAA, HIPAA-aligned | Open |
 
 Note: this model emits reasoning tokens billed as output, so its cost per task runs above its per-token rate card.
 
@@ -88,7 +72,7 @@ curl https://api.v2.healthproximate.com/api/v1/llm/chat/completions \
 ```
 
 <Info>
-  **Per-organization clearance.** Your contract sets the menu — for example, APAC-resident destinations only. Models outside your clearance return `403` with `code: "model_not_allowed"`. There is no region parameter on the request: the destination follows the model you name, so the clearance is what guarantees it rather than a per-call flag we would have to trust the caller to set.
+  **Per-organization clearance.** Your contract sets the menu. Models outside your clearance return `403` with `code: "model_not_allowed"`. There is no region or routing parameter on the request — the model you name determines how it is served, so your clearance is what guarantees the arrangement rather than a per-call flag we would have to trust the caller to set.
 </Info>
 
 ## Errors you may see
