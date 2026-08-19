@@ -3,7 +3,9 @@ title: "Models"
 description: "The full model catalog the gateway serves, grouped by provider, with the residency of every destination."
 ---
 
-The gateway serves models from five providers. Every destination is **named and assessed**: our PDPA Transfer Impact Assessment is complete, and inference runs under our signed BAAs (AWS and Microsoft Azure). Whatever model you pick, the redaction path is identical — identifiers never reach the model.
+The gateway serves models from five providers. Every destination is **named** below, and inference runs under our signed BAAs (AWS and Microsoft Azure). Whatever model you pick, the redaction path is identical — identifiers never reach the model.
+
+**Read the residency column before you choose.** Only the Amazon Nova family is bounded to APAC and carries a completed transfer assessment. Every other model on this page can process outside the region you might assume, and its transfer assessment is still open. If your contract requires APAC-resident processing, ask us to restrict your clearance to the Nova family.
 
 If you omit `model`, the gateway uses `apac.amazon.nova-pro-v1:0`.
 
@@ -11,51 +13,65 @@ Every model in this catalog supports [tool calling](/api/tool-calling). Models w
 
 ## Amazon
 
-| Model ID | Tier | Residency |
-| --- | --- | --- |
-| `apac.amazon.nova-pro-v1:0` | Standard (default) | APAC-bounded, 10 `ap-*` regions |
-| `apac.amazon.nova-lite-v1:0` | Light | APAC-bounded, 10 `ap-*` regions |
-| `apac.amazon.nova-micro-v1:0` | Micro | APAC-bounded, 10 `ap-*` regions |
+| Model ID | Tier | Residency | Transfer assessment |
+| --- | --- | --- | --- |
+| `apac.amazon.nova-pro-v1:0` | Standard (default) | APAC-bounded, 10 named `ap-*` regions | Complete |
+| `apac.amazon.nova-lite-v1:0` | Light | APAC-bounded, 10 named `ap-*` regions | Complete |
+| `apac.amazon.nova-micro-v1:0` | Micro | APAC-bounded, 10 named `ap-*` regions | Complete |
 
-Bedrock `apac` inference profiles. Verified routing set: `ap-southeast-1..5`, `ap-northeast-1..3`, `ap-south-1..2`. No US, no EU.
+Bedrock `apac` inference profiles. The routing set was verified from `ap-southeast-5` with `aws bedrock get-inference-profile`, and is these ten regions and no others:
+
+`ap-southeast-1`, `ap-southeast-2`, `ap-southeast-3`, `ap-southeast-4`, `ap-southeast-5`, `ap-northeast-1`, `ap-northeast-2`, `ap-northeast-3`, `ap-south-1`, `ap-south-2`.
+
+No US. No EU.
+
+<Note>
+  **APAC-bounded is not Malaysia-only.** Requests enter AWS in Malaysia (`ap-southeast-5`), but the inference profile may serve any of the ten regions above, and we do not control or observe which. AWS offers no single-region option for these models: every foundation model in `ap-southeast-5` is inference-profile-only, and the only Nova profiles there are the `apac.*` ones. In-country-only processing needs a different arrangement — ask us if your contract requires it.
+</Note>
 
 ## Anthropic
 
-| Model ID | Tier | Residency |
-| --- | --- | --- |
-| `global.anthropic.claude-opus-5` | Frontier (most capable) | Malaysia (`ap-southeast-5`) |
-| `global.anthropic.claude-sonnet-5` | Frontier | Malaysia (`ap-southeast-5`) |
-| `global.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast | Malaysia (`ap-southeast-5`) |
+| Model ID | Tier | Residency | Transfer assessment |
+| --- | --- | --- | --- |
+| `global.anthropic.claude-opus-5` | Frontier (most capable) | **Global — may include the US** | Open |
+| `global.anthropic.claude-sonnet-5` | Frontier | **Global — may include the US** | Open |
+| `global.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast | **Global — may include the US** | Open |
 
-Served on AWS Bedrock in the Malaysia region under the AWS BAA — in-country processing, no cross-border transfer.
+These are `global.*` inference profiles on AWS Bedrock, under the AWS BAA. AWS describes the profile as routing "globally across all supported AWS Regions", and its model list carries a region-less ARN — so the destination is not bounded to any region or continent.
+
+Use the Nova family instead if you need an APAC-bounded destination.
 
 ## OpenAI
 
-| Model ID | Tier | Residency |
-| --- | --- | --- |
-| `gpt-5.5` | Frontier | Azure endpoints under the Microsoft BAA |
-| `gpt-5.6-luna` | Frontier | Azure endpoints under the Microsoft BAA |
-| `gpt-5.6-sol` | Frontier | Azure endpoints under the Microsoft BAA |
-| `openai.gpt-oss-120b-1:0` | Open-weight | APAC (`ap-northeast-1`, Tokyo) |
-| `openai.gpt-oss-20b-1:0` | Open-weight, fast | APAC (`ap-northeast-1`, Tokyo) |
+| Model ID | Tier | Residency | Transfer assessment |
+| --- | --- | --- | --- |
+| `gpt-5.5` | Frontier | Azure AI Foundry, **East US 2** | Open |
+| `gpt-5.6-luna` | Frontier | Azure AI Foundry, **East US 2** | Open |
+| `gpt-5.6-sol` | Frontier | Azure AI Foundry, **East US 2** | Open |
+| `openai.gpt-oss-120b-1:0` | Open-weight | APAC — `ap-northeast-1`, Tokyo | Open |
+| `openai.gpt-oss-20b-1:0` | Open-weight, fast | APAC — `ap-northeast-1`, Tokyo | Open |
 
-The GPT-5.x family speaks the OpenAI Responses dialect; the gateway routes it by model ID, so your request format does not change. The open-weight `gpt-oss` models run on AWS Bedrock in Tokyo.
+The GPT-5.x family speaks the OpenAI Responses dialect; the gateway routes it by model ID, so your request format does not change. Those deployments sit in a named Azure region under the Microsoft BAA, and that region is in the United States.
+
+The open-weight `gpt-oss` models run on AWS Bedrock in Tokyo. That is a cross-border transfer from Malaysia, though it stays within APAC.
 
 ## DeepSeek
 
-| Model ID | Tier | Residency |
-| --- | --- | --- |
-| `deepseek-v4-pro` | Frontier reasoning | Azure endpoints under the Microsoft BAA |
-| `deepseek-v4-flash` | Fast | Azure endpoints under the Microsoft BAA |
-| `deepseek.v3.2` | Reasoning | APAC (`ap-northeast-1`, Tokyo) |
+| Model ID | Tier | Residency | Transfer assessment |
+| --- | --- | --- | --- |
+| `deepseek-v4-pro` | Frontier reasoning | Azure AI Foundry, **East US 2** | Open |
+| `deepseek-v4-flash` | Fast | Azure AI Foundry, **East US 2** | Open |
+| `deepseek.v3.2` | Reasoning | **US — `us-west-2`** | Open |
 
-V4 Pro and V4 Flash serve from Azure AI Foundry deployments. V3.2 runs on AWS Bedrock in Tokyo.
+V4 Pro and V4 Flash serve from Azure AI Foundry deployments in East US 2, under the Microsoft BAA. V3.2 runs on AWS Bedrock and the gateway calls it in `us-west-2`; it is also served from `ap-northeast-1`, but the region we call is the US one.
 
 ## MiniMax
 
-| Model ID | Tier | Residency |
-| --- | --- | --- |
-| `minimax.minimax-m2.5` | Reasoning | APAC (`ap-northeast-1`, Tokyo) |
+| Model ID | Tier | Residency | Transfer assessment |
+| --- | --- | --- | --- |
+| `minimax.minimax-m2.5` | Reasoning | **US — `us-west-2`** | Open |
+
+On AWS Bedrock, called in `us-west-2`. It is also served from `ap-northeast-1`, but the region we call is the US one.
 
 Note: this model emits reasoning tokens billed as output, so its cost per task runs above its per-token rate card.
 
@@ -66,7 +82,7 @@ curl https://api.v2.healthproximate.com/api/v1/llm/chat/completions \
   -H "Authorization: Bearer hpx_..." \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "global.anthropic.claude-sonnet-5",
+    "model": "apac.amazon.nova-pro-v1:0",
     "messages": [{"role": "user", "content": "Summarize this discharge note: ..."}]
   }'
 ```
