@@ -17,7 +17,22 @@ A model ID with **no** prefix is the narrowest case of all: it is served from on
 
 A signed BAA covers the *service*; a transfer assessment needs the *country*. Both are required, and they are not the same question.
 
-**No model in this catalog is served from Malaysia.** AWS offers no single-region or Asia-Pacific-scoped route for the frontier families in `ap-southeast-5` — only worldwide routing, which names no destination. If in-country processing is a hard requirement for you, tell us before you build: it changes which models are available to you, and for some families the answer today is none.
+### Reachable from Malaysia, processed elsewhere
+
+These are two different questions and the difference matters, so we separate them plainly.
+
+| | Answer |
+| --- | --- |
+| Can you **call** the gateway from Malaysia? | **Yes.** The gateway itself runs in `ap-southeast-5` (AWS Malaysia), and every model in this catalog is callable from there — and from anywhere else you reach the API |
+| Is your prompt **processed** in Malaysia? | **No.** Inference happens in the destination named by the model ID — Japan, India, the US, or an Asia-Pacific region set |
+
+Nothing here limits where you can *use* the gateway. What we cannot offer today is **inference inside Malaysia**: AWS publishes no in-region or Asia-Pacific-scoped route for the frontier model families in `ap-southeast-5`, and the Malaysia region's own catalog carries only a small set of models. Where a family is reachable from `ap-southeast-5`, it is reachable via worldwide routing, which names no destination and therefore cannot carry a completed assessment.
+
+The same holds on the Azure side: our Azure AI Foundry deployment is a US resource, not a Malaysian one.
+
+<Note>
+  If in-country processing is a hard requirement in your contract, tell us before you build. It changes which models are available to you, and for some families the honest answer today is none of them. It is a solvable problem for specific models, and not a general one.
+</Note>
 
 Every model in this catalog supports [tool calling](/api/tool-calling). Models without tool support are not listed.
 
@@ -93,7 +108,7 @@ One country, one region, and the shortest transfer chain we offer. These run on 
 **Why this group is the shortest chain.** Three things line up here that rarely line up together: the destination is a single country, AWS applies zero data retention by default and none of these models carries a retention exception, and the weights run in AWS-operated accounts so the model's authors receive nothing. If residency is the deciding factor for you, start here.
 
 <Note>
-  These models are served from Japan, which is still a cross-border transfer from Malaysia. "Single country" means the assessment names one jurisdiction instead of many — not that the data stays in Malaysia. No model in this catalog is served from Malaysia; see the note above on reading a model ID as a destination.
+  These models are **processed in Japan**, which is still a cross-border transfer from Malaysia. "Single country" means the assessment names one jurisdiction instead of many — not that the data stays in Malaysia. You can call them from Malaysia; the inference happens in Tokyo. See [Reachable from Malaysia, processed elsewhere](#reachable-from-malaysia-processed-elsewhere) above.
 </Note>
 
 ## MiniMax
