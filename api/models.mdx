@@ -11,6 +11,8 @@ The gateway serves models from five providers. Every model runs under a signed B
 
 If you omit `model`, the gateway uses `apac.amazon.nova-pro-v1:0`.
 
+**Read the model ID as a destination, not just a capability.** A prefix names where inference happens: `apac.` is the ten Asia-Pacific AWS regions, `us.` is the United States, `in.` is India, and `jp.` is Japan. A model ID with no such prefix, or with `global.`, is served from a pool that names no single jurisdiction — which is why those cannot carry a completed assessment, whatever their BAA status. A signed BAA covers the *service*; a transfer assessment needs the *country*. Both are required, and they are not the same question.
+
 Every model in this catalog supports [tool calling](/api/tool-calling). Models without tool support are not listed.
 
 ## Amazon
@@ -37,13 +39,26 @@ Same AWS account and BAA as the Nova family.
 
 | Model ID | Tier | Processor | Transfer assessment |
 | --- | --- | --- | --- |
+| `us.openai.gpt-5.6-terra` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — United States |
+| `us.openai.gpt-5.6-luna` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — United States |
+| `us.openai.gpt-5.6-sol` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — United States |
+| `in.openai.gpt-5.6-terra` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — India |
+| `in.openai.gpt-5.6-luna` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — India |
 | `gpt-5.5` | Frontier | Azure AI Foundry — Microsoft BAA | Open |
 | `gpt-5.6-luna` | Frontier | Azure AI Foundry — Microsoft BAA | Open |
 | `gpt-5.6-sol` | Frontier | Azure AI Foundry — Microsoft BAA | Open |
 | `openai.gpt-oss-120b-1:0` | Open-weight | AWS Bedrock — BAA, HIPAA-aligned | Open |
 | `openai.gpt-oss-20b-1:0` | Open-weight, fast | AWS Bedrock — BAA, HIPAA-aligned | Open |
 
-The GPT-5.x family speaks the OpenAI Responses dialect; the gateway routes it by model ID, so your request format does not change.
+**The `us.` and `in.` prefixes are the destination.** These are the same GPT-5.6 models, served from a single named jurisdiction — the United States, or India — rather than from a pool. That is what makes their assessment completable, and it is why the prefix is part of the model ID rather than a separate parameter: naming the model names the destination.
+
+Pick `in.` for the shortest chain — one country, one assessment. Pick `us.` for the widest capacity. The Azure-served `gpt-5.x` rows are a different route to the same family and remain unassessed.
+
+<Warning>
+  **These five models retain flagged traffic for up to 30 days.** AWS applies zero data retention to Bedrock by default, but the GPT-5.6 family is an exception: traffic flagged by its abuse classifier is held up to 30 days for automated review, in the region that processed the request. It is not shared with OpenAI. If that does not suit your use case, pick a Nova or `gpt-oss` model — neither carries the exception.
+</Warning>
+
+Dialect note: the Azure-served GPT-5.x route speaks the OpenAI Responses format; the AWS-served `us.` / `in.` route speaks Bedrock Converse. The gateway routes by model ID either way, so **your request format does not change**.
 
 ## DeepSeek
 
