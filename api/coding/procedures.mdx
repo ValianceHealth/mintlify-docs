@@ -1,0 +1,33 @@
+---
+title: "Procedure coding"
+description: "Code procedures to ICD-10-PCS or OPCS-4 — and understand why the procedure code decides the DRG."
+---
+
+Procedure coding runs through the same [`POST /api/v1/search/`](/api-reference) endpoint, with `domain: "Procedure"`.
+
+| Vocabulary | Parameter value | Status |
+| --- | --- | --- |
+| ICD-10-PCS | `ICD10PCS` | Available |
+| OPCS-4 | `OPCS4` | Available |
+
+## Code a procedure
+
+```bash
+curl https://api.v2.healthproximate.com/api/v1/search/ \
+  -H "X-API-Key: hpx_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "total knee replacement",
+    "domain": "Procedure",
+    "vocabulary": "ICD10PCS",
+    "limit": 5
+  }'
+```
+
+## Why the procedure code matters most
+
+The DRG grouper splits surgical from medical DRGs on the **procedure** code. A case with a valid diagnosis but a missing or wrong PCS code groups MEDICAL — usually the cheaper DRG — and the revenue difference is real. If your source system records procedures in local or free-text form, code them here before you call [`POST /api/v1/drg/classify/`](/api-reference).
+
+<Note>
+Similarity is not equivalence. A high match score on the wrong body system is still the wrong code — review procedure candidates clinically before they enter a billing path.
+</Note>
