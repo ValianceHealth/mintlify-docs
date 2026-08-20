@@ -29,11 +29,11 @@ The default family, and the one with a completed assessment. Pick these unless y
 
 | Model ID | Tier | Processor | Transfer assessment |
 | --- | --- | --- | --- |
-| `global.anthropic.claude-opus-5` | Frontier (most capable) | AWS Bedrock — BAA, HIPAA-aligned | Complete |
-| `global.anthropic.claude-sonnet-5` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete |
-| `global.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast | AWS Bedrock — BAA, HIPAA-aligned | Complete |
+| `global.anthropic.claude-opus-5` | Frontier (most capable) | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
+| `global.anthropic.claude-sonnet-5` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
+| `global.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
 
-Same AWS account and BAA as the Nova family.
+Same AWS account and BAA as the Nova family. The BAA is not the open question — the destination is. A `global.` profile routes to whichever region has capacity, so there is no single country to assess, and by the rule above that keeps the assessment Open. An APAC-resident Claude exists on a `jp.` profile and would close it; that route is not served here yet.
 
 ## OpenAI
 
