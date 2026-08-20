@@ -44,12 +44,15 @@ Same AWS account and BAA as the Nova family.
 | `us.openai.gpt-5.6-sol` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — United States |
 | `in.openai.gpt-5.6-terra` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — India |
 | `in.openai.gpt-5.6-luna` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — India |
+| `global.openai.gpt-5.6-terra` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
+| `global.openai.gpt-5.6-luna` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
+| `global.openai.gpt-5.6-sol` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
 | `openai.gpt-oss-120b-1:0` | Open-weight | AWS Bedrock — BAA, HIPAA-aligned | Open |
 | `openai.gpt-oss-20b-1:0` | Open-weight, fast | AWS Bedrock — BAA, HIPAA-aligned | Open |
 
 **The `us.` and `in.` prefixes are the destination.** These are the same GPT-5.6 models, served from a single named jurisdiction — the United States, or India — rather than from a pool. That is what makes their assessment completable, and it is why the prefix is part of the model ID rather than a separate parameter: naming the model names the destination.
 
-Pick `in.` for the shortest chain — one country, one assessment. Pick `us.` for the widest capacity.
+Pick `in.` for the shortest chain — one country, one assessment. Pick `us.` for the widest capacity. The `global.` rows are the same three models served from a worldwide pool: same BAA, same processor, but no single country to assess — so they stay Open, and clinical traffic belongs on a prefixed id.
 
 <Warning>
   **These five models retain flagged traffic for up to 30 days.** AWS applies zero data retention to Bedrock by default, but the GPT-5.6 family is an exception: traffic flagged by its abuse classifier is held up to 30 days for automated review, in the region that processed the request. It is not shared with OpenAI. If that does not suit your use case, pick a Nova or `gpt-oss` model — neither carries the exception.
