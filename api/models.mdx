@@ -5,7 +5,9 @@ description: "The full model catalog the gateway serves, grouped by provider, wi
 
 The gateway serves models from five providers. Every model runs under a signed BAA — AWS or Microsoft. Whatever model you pick, the redaction path is identical: identifiers never reach the model.
 
-**Where each model processes your data is covered by our PDPA Transfer Impact Assessment**, which names every destination. We share it under NDA — ask us, and ask before you build against a model if residency is a requirement for you. Your contract then sets which models your organization may call, and anything outside that clearance returns `403` with `code: "model_not_allowed"`.
+**Where each model processes your data is covered by our PDPA Transfer Impact Assessment**, which names every destination. We share it under NDA — ask us, and ask before you build against a model if residency is a requirement for you.
+
+**The assessment is ours to complete, not yours to negotiate.** A model whose destination we have assessed is callable by every customer. One we have not assessed is callable by none, and returns `403` with `code: "model_not_allowed"` until that changes. The **Transfer assessment** column below tells you which is which today.
 
 If you omit `model`, the gateway uses `apac.amazon.nova-pro-v1:0`.
 
@@ -72,14 +74,16 @@ curl https://api.v2.healthproximate.com/api/v1/llm/chat/completions \
 ```
 
 <Info>
-  **Per-organization clearance.** Your contract sets the menu. Models outside your clearance return `403` with `code: "model_not_allowed"`. There is no region or routing parameter on the request — the model you name determines how it is served, so your clearance is what guarantees the arrangement rather than a per-call flag we would have to trust the caller to set.
+  **The catalog is the same for every customer.** A model is callable once its destination is covered by our transfer assessment, and refused until then — the same set for everyone, not a per-account menu. Models not yet covered return `403` with `code: "model_not_allowed"`.
+
+  There is no region or routing parameter on the request. The model you name determines how it is served, so the model id is the whole choice — not a per-call flag we would have to trust the caller to set.
 </Info>
 
 ## Errors you may see
 
 | Status | Code | Meaning |
 | --- | --- | --- |
-| `403` | `model_not_allowed` | The model is outside your organization's clearance. Pick a model from your cleared set. |
+| `403` | `model_not_allowed` | This model's destination is not yet covered by our transfer assessment, so it is not callable by anyone. Pick a model whose **Transfer assessment** reads Complete. |
 | `503` | — | The redaction engine is unavailable. The gateway fails closed rather than forward un-redacted text. |
 
 See [Errors & limits](/api/errors-and-limits) for the full error contract.
