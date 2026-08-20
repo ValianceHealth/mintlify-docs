@@ -44,27 +44,23 @@ Same AWS account and BAA as the Nova family.
 | `us.openai.gpt-5.6-sol` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — United States |
 | `in.openai.gpt-5.6-terra` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — India |
 | `in.openai.gpt-5.6-luna` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — India |
-| `gpt-5.5` | Frontier | Azure AI Foundry — Microsoft BAA | Open |
-| `gpt-5.6-luna` | Frontier | Azure AI Foundry — Microsoft BAA | Open |
-| `gpt-5.6-sol` | Frontier | Azure AI Foundry — Microsoft BAA | Open |
 | `openai.gpt-oss-120b-1:0` | Open-weight | AWS Bedrock — BAA, HIPAA-aligned | Open |
 | `openai.gpt-oss-20b-1:0` | Open-weight, fast | AWS Bedrock — BAA, HIPAA-aligned | Open |
 
 **The `us.` and `in.` prefixes are the destination.** These are the same GPT-5.6 models, served from a single named jurisdiction — the United States, or India — rather than from a pool. That is what makes their assessment completable, and it is why the prefix is part of the model ID rather than a separate parameter: naming the model names the destination.
 
-Pick `in.` for the shortest chain — one country, one assessment. Pick `us.` for the widest capacity. The Azure-served `gpt-5.x` rows are a different route to the same family and remain unassessed.
+Pick `in.` for the shortest chain — one country, one assessment. Pick `us.` for the widest capacity.
 
 <Warning>
   **These five models retain flagged traffic for up to 30 days.** AWS applies zero data retention to Bedrock by default, but the GPT-5.6 family is an exception: traffic flagged by its abuse classifier is held up to 30 days for automated review, in the region that processed the request. It is not shared with OpenAI. If that does not suit your use case, pick a Nova or `gpt-oss` model — neither carries the exception.
 </Warning>
 
-Dialect note: the Azure-served GPT-5.x route speaks the OpenAI Responses format; the AWS-served `us.` / `in.` route speaks Bedrock Converse. The gateway routes by model ID either way, so **your request format does not change**.
+Dialect note: the AWS-served GPT-5.6 route speaks Bedrock Converse. The gateway routes by model ID, so **your request format does not change**.
 
 ## DeepSeek
 
 | Model ID | Tier | Processor | Transfer assessment |
 | --- | --- | --- | --- |
-| `deepseek-v4-pro` | Frontier reasoning | Azure AI Foundry — Microsoft BAA | Open |
 | `deepseek-v4-flash` | Fast | Azure AI Foundry — Microsoft BAA | Open |
 | `deepseek.v3.2` | Reasoning | AWS Bedrock — BAA, HIPAA-aligned | Open |
 
