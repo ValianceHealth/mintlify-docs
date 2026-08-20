@@ -55,7 +55,7 @@ Same AWS account and BAA as the Nova family. The BAA is not the open question �
 Pick `in.` for the shortest chain — one country, one assessment. Pick `us.` for the widest capacity. The `global.` rows are the same three models served from a worldwide pool: same BAA, same processor, but no single country to assess — so they stay Open, and clinical traffic belongs on a prefixed id.
 
 <Warning>
-  **These five models retain flagged traffic for up to 30 days.** AWS applies zero data retention to Bedrock by default, but the GPT-5.6 family is an exception: traffic flagged by its abuse classifier is held up to 30 days for automated review, in the region that processed the request. It is not shared with OpenAI. If that does not suit your use case, pick a Nova or `gpt-oss` model — neither carries the exception.
+  **The GPT-5.6 family retains flagged traffic for up to 30 days.** AWS applies zero data retention to Bedrock by default, but the GPT-5.6 family is an exception: traffic flagged by its abuse classifier is held up to 30 days for automated review, in the region that processed the request. It is not shared with OpenAI. If that does not suit your use case, pick a Nova or `gpt-oss` model — neither carries the exception.
 </Warning>
 
 Dialect note: the AWS-served GPT-5.6 route speaks Bedrock Converse. The gateway routes by model ID, so **your request format does not change**.
@@ -64,7 +64,7 @@ Dialect note: the AWS-served GPT-5.6 route speaks Bedrock Converse. The gateway 
 
 | Model ID | Tier | Processor | Transfer assessment |
 | --- | --- | --- | --- |
-| `deepseek-v4-flash` | Fast | Azure AI Foundry — Microsoft BAA | Open |
+| `DeepSeek-V4-Flash` | Fast | Azure AI Foundry — Microsoft BAA | Open |
 | `deepseek.v3.2` | Reasoning | AWS Bedrock — BAA, HIPAA-aligned | Open |
 
 ## MiniMax
