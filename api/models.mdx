@@ -11,7 +11,13 @@ The gateway serves models from five providers. Every model runs under a signed B
 
 If you omit `model`, the gateway uses `apac.amazon.nova-pro-v1:0`.
 
-**Read the model ID as a destination, not just a capability.** A prefix names where inference happens: `apac.` is the ten Asia-Pacific AWS regions, `us.` is the United States, `in.` is India, and `jp.` is Japan. A model ID with no such prefix, or with `global.`, is served from a pool that names no single jurisdiction — which is why those cannot carry a completed assessment, whatever their BAA status. A signed BAA covers the *service*; a transfer assessment needs the *country*. Both are required, and they are not the same question.
+**Read the model ID as a destination, not just a capability.** A prefix names where inference happens: `apac.` is the ten Asia-Pacific AWS regions, `us.` is the four commercial US regions, `in.` is India's two, and `jp.` is Japan's two. `global.` names no single jurisdiction and therefore cannot carry a completed assessment, whatever its BAA status.
+
+A model ID with **no** prefix is the narrowest case of all: it is served from one region only, with no cross-region routing. That is why the Japan group below is the shortest chain we offer.
+
+A signed BAA covers the *service*; a transfer assessment needs the *country*. Both are required, and they are not the same question.
+
+**No model in this catalog is served from Malaysia.** AWS offers no single-region or Asia-Pacific-scoped route for the frontier families in `ap-southeast-5` — only worldwide routing, which names no destination. If in-country processing is a hard requirement for you, tell us before you build: it changes which models are available to you, and for some families the answer today is none.
 
 Every model in this catalog supports [tool calling](/api/tool-calling). Models without tool support are not listed.
 
@@ -67,6 +73,28 @@ Dialect note: the Azure-served GPT-5.x route speaks the OpenAI Responses format;
 | `deepseek-v4-pro` | Frontier reasoning | Azure AI Foundry — Microsoft BAA | Open |
 | `deepseek-v4-flash` | Fast | Azure AI Foundry — Microsoft BAA | Open |
 | `deepseek.v3.2` | Reasoning | AWS Bedrock — BAA, HIPAA-aligned | Open |
+
+## Served from Japan
+
+One country, one region, and the shortest transfer chain we offer. These run on bare model IDs in `ap-northeast-1` — no cross-region routing at all, so the destination is a single place rather than a list of them.
+
+| Model ID | Tier | Processor | Transfer assessment |
+| --- | --- | --- | --- |
+| `openai.gpt-oss-safeguard-120b` | Safety classifier | AWS Bedrock — BAA, HIPAA-aligned | Complete — Japan |
+| `openai.gpt-oss-safeguard-20b` | Safety classifier, fast | AWS Bedrock — BAA, HIPAA-aligned | Complete — Japan |
+| `openai.gpt-oss-120b-1:0` | Open-weight | AWS Bedrock — BAA, HIPAA-aligned | Complete — Japan |
+| `openai.gpt-oss-20b-1:0` | Open-weight, fast | AWS Bedrock — BAA, HIPAA-aligned | Complete — Japan |
+| `qwen.qwen3-235b-a22b-2507-v1:0` | Reasoning | AWS Bedrock — BAA, HIPAA-aligned | Complete — Japan |
+| `zai.glm-5` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — Japan |
+| `zai.glm-4.7` | Balanced | AWS Bedrock — BAA, HIPAA-aligned | Complete — Japan |
+| `moonshotai.kimi-k2.5` | Reasoning | AWS Bedrock — BAA, HIPAA-aligned | Complete — Japan |
+| `mistral.mistral-large-3-675b-instruct` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — Japan |
+
+**Why this group is the shortest chain.** Three things line up here that rarely line up together: the destination is a single country, AWS applies zero data retention by default and none of these models carries a retention exception, and the weights run in AWS-operated accounts so the model's authors receive nothing. If residency is the deciding factor for you, start here.
+
+<Note>
+  These models are served from Japan, which is still a cross-border transfer from Malaysia. "Single country" means the assessment names one jurisdiction instead of many — not that the data stays in Malaysia. No model in this catalog is served from Malaysia; see the note above on reading a model ID as a destination.
+</Note>
 
 ## MiniMax
 
