@@ -1,0 +1,32 @@
+---
+title: "Drug coding"
+description: "Map drug names — brands, generics, local formulations — to RxNorm concepts."
+---
+
+Drug coding runs through [`POST /api/v1/search/`](/api-reference) with `domain: "Drug"`.
+
+| Vocabulary | Parameter value | Status |
+| --- | --- | --- |
+| RxNorm | `RxNorm` | Available |
+
+## Code a drug
+
+```bash
+curl https://api.v2.healthproximate.com/api/v1/search/ \
+  -H "X-API-Key: hpx_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "augmentin 625mg",
+    "domain": "Drug",
+    "vocabulary": "RxNorm",
+    "limit": 5
+  }'
+```
+
+Brand names resolve toward their ingredient and clinical-drug concepts, so `augmentin` finds amoxicillin/clavulanate concepts even when the exact brand string is absent.
+
+## Practical notes
+
+1. **Granularity:** RxNorm carries ingredient, clinical drug, and branded levels. Pick the level your downstream system expects and filter candidates by concept class.
+2. **Local products:** Malaysian trade names not in RxNorm resolve via ingredient matches. Review low-score candidates before use.
+3. **Supply items are not drugs:** consumables and implants (stents, dressings) live in the Device/supply space, not RxNorm — a drug search will not find them.

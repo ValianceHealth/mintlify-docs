@@ -1,0 +1,40 @@
+---
+title: "Diagnosis coding"
+description: "Code diagnoses to ICD-10 or SNOMED CT through the concept search API. ICD-11 is on the roadmap."
+---
+
+Diagnosis coding runs through [`POST /api/v1/search/`](/api-reference). Send a clinical term; receive ranked candidate concepts in the vocabulary you name.
+
+| Vocabulary | Parameter value | Status |
+| --- | --- | --- |
+| ICD-10-CM | `ICD10CM` | Available |
+| SNOMED CT | `SNOMED` | Available |
+| ICD-11 | — | **Soon.** WHO ICD-11 main-condition rules already drive our DRG pipeline internally; public ICD-11 output joins after crosswalk curation. |
+
+## Code a diagnosis to ICD-10
+
+```bash
+curl https://api.v2.healthproximate.com/api/v1/search/ \
+  -H "X-API-Key: hpx_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "community acquired pneumonia",
+    "domain": "Condition",
+    "vocabulary": "ICD10CM",
+    "limit": 5
+  }'
+```
+
+The response ranks candidate concepts with codes, names, and match scores. Filter by `domain: "Condition"` so procedure and drug concepts stay out of diagnosis results.
+
+## Code to SNOMED CT instead
+
+Change one field: `"vocabulary": "SNOMED"`. Same request, same response shape.
+
+<Note>
+One search field serves both vocabularies. If you consume SNOMED and ICD-10 side by side, run the search per vocabulary — do not mix them in one call and split the results by code shape.
+</Note>
+
+## From diagnosis codes to a DRG
+
+Diagnosis codes feed [DRG classification](/api-reference): send your coded diagnoses (and procedures) to `POST /api/v1/drg/classify/`, or send raw clinical text to `POST /api/v1/drg/agent/` and let the agent code first.

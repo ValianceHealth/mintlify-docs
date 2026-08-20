@@ -113,6 +113,18 @@
             ]
           },
           {
+            "group": "Clinical coding",
+            "openapi": "api/openapi-commercial.yaml",
+            "pages": [
+              "api/coding/diagnosis",
+              "api/coding/procedures",
+              "api/coding/drugs",
+              "POST /api/v1/search/",
+              "GET /api/v1/search/domains/",
+              "GET /api/v1/search/vocabularies/"
+            ]
+          },
+          {
             "group": "DRG",
             "openapi": "api/openapi-commercial.yaml",
             "pages": [
@@ -121,15 +133,6 @@
               "POST /api/v1/drg/batch/",
               "GET /api/v1/drg/batch/{job_id}/",
               "POST /api/v1/fhir/drg/$classify"
-            ]
-          },
-          {
-            "group": "Vocabulary",
-            "openapi": "api/openapi-commercial.yaml",
-            "pages": [
-              "POST /api/v1/search/",
-              "GET /api/v1/search/domains/",
-              "GET /api/v1/search/vocabularies/"
             ]
           }
         ]
