@@ -18,7 +18,7 @@ paths:
         \ DRG assignments.\n\n**LLM cost:** ~$0.01-0.05 per request (uses Claude Sonnet via AWS Bedrock).\n\
         \nFor structured ICD-10 code input, use the `/api/v1/drg/classify/` endpoint instead ($0 cost).\n\
         \    "
-      summary: Classify clinical text with the DRG agent
+      summary: AI agent for DRG classification from clinical text
       tags:
       - DRG
       requestBody:
@@ -72,7 +72,7 @@ paths:
         \ up front rather than mis-grouped.\n\nBilling: one ledger row per case (`service_type=\"drg_batch\"\
         `), written exactly\nonce even across worker retries. A spend-capped organization's submission\
         \ is\nrefused at enqueue with a 429 and costs nothing.\n    "
-      summary: Submit a DRG batch job
+      summary: Submit a batch of coded cases for DRG classification
       parameters:
       - in: header
         name: Idempotency-Key
@@ -117,7 +117,7 @@ paths:
         \ hit its spend limit; the job resumes\nautomatically when the limit clears).\n\nCase results\
         \ carry your `case_ref`, so you can join them back to your\nrecords. Failed cases carry an `error`\
         \ string; they were not billed as\nsuccessful classifications.\n    "
-      summary: Get DRG batch job status
+      summary: Batch job status and progressive results
       parameters:
       - in: path
         name: job_id
@@ -144,7 +144,7 @@ paths:
         \ code\nusing the vhdrg classification engine.\n\n**No LLM cost** — this endpoint uses deterministic\
         \ rule-based classification.\n\nSupported MS-DRG versions: v36 (FY2019) through v40 (FY2023),\
         \ and v43 (FY2026).\nCMS grouper data for v41/v42 is not shipped by the vhdrg engine.\n    "
-      summary: Classify ICD-10 codes to a DRG
+      summary: Classify ICD-10 codes into MS-DRG
       tags:
       - DRG
       requestBody:
@@ -208,7 +208,7 @@ paths:
         this with `fhir_identifiers_dropped`. The submitted Bundle is not persisted.\n\nReturns a FHIR\
         \ `Parameters` resource carrying the DRG code, description and\ngrouper version. Malformed or\
         \ unclassifiable input returns an\n`OperationOutcome` — never a partial result.\n    "
-      summary: Classify a FHIR R4 Bundle
+      summary: Classify a FHIR R4 Bundle into an MS-DRG ($classify)
       tags:
       - DRG
       security:
@@ -242,7 +242,7 @@ paths:
         (`stream` with `redact_only=false`), tools combined with `stream`, non-text\ncontent parts, forcing\
         \ a specific tool via `tool_choice`, and the deprecated\n`functions`/`function_call` form.\n \
         \   "
-      summary: Create a chat completion
+      summary: PHI-safe chat completion (OpenAI-compatible)
       tags:
       - Gateway
       requestBody:
@@ -270,6 +270,22 @@ paths:
           description: Rate limit or spend limit reached
         '503':
           description: Redaction failed — request refused
+  /api/v1/llm/models:
+    get:
+      operationId: llm_list_models
+      description: OpenAI-compatible model list. Returns only models THIS credential can actually call
+        — a model absent here would be refused by `/api/v1/llm/chat/completions`, and a model present
+        here would not.
+      summary: List the models this key may call
+      tags:
+      - Gateway
+      security:
+      - gateway_bearer_auth: []
+      responses:
+        '200':
+          description: An OpenAI-shaped model list
+        '401':
+          description: Missing or invalid API key
   /api/v1/redact/:
     post:
       operationId: v1_redact_create
@@ -284,7 +300,7 @@ paths:
         \ are NOT redacted, because stripping them destroys the meaning a\ndownstream model needs.\n\n\
         **Fail-closed:** if redaction cannot complete, this endpoint returns 503 with a\n`failed_closed`\
         \ receipt and no text — it never returns your input unredacted.\n    "
-      summary: Redact PHI from text
+      summary: Redact PHI/PII from free text
       tags:
       - Gateway
       requestBody:
@@ -362,7 +378,7 @@ paths:
 
 
         Supported domains: Condition, Procedure, Drug, Measurement, Observation, Device, Specimen.'
-      summary: Search OMOP concepts
+      summary: Search OMOP concepts (API)
       parameters:
       - in: query
         name: profile
@@ -479,7 +495,7 @@ paths:
 
 
         **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
-      summary: List supported domains
+      summary: Get supported domains (API)
       parameters:
       - in: query
         name: response_format
@@ -515,7 +531,7 @@ paths:
 
 
         **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
-      summary: List supported vocabularies
+      summary: Get supported vocabularies (API)
       parameters:
       - in: query
         name: response_format
@@ -577,6 +593,13 @@ components:
         stream:
           type: boolean
           default: false
+        reasoning:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          description: 'Reasoning-model controls, e.g. {"effort": "high", "summary": "detailed"}. Only
+            `effort` and `summary` are forwarded; other keys are ignored. Applies to the GPT-5.x family;
+            ignored by other models.'
         redact_only:
           type: boolean
           default: false
@@ -627,11 +650,14 @@ components:
     ChatMessageRoleEnum:
       enum:
       - system
+      - developer
       - user
       - assistant
       - tool
       type: string
       description: '* `system` - system
+
+        * `developer` - developer
 
         * `user` - user
 
