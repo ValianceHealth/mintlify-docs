@@ -7,26 +7,37 @@ Your key is issued by Valiance Health, prefixed `hpx_`, and shown **once** at is
 
 ## Two ways to present the same key
 
+Both work on every endpoint in this reference. Pick whichever your client makes
+easy — the key is validated identically either way, and neither grants access
+the other does not.
+
 <CardGroup cols={2}>
   <Card title="X-API-Key header" icon="key">
     ```
     X-API-Key: hpx_...
     ```
 
-    Works on every endpoint in this reference.
+    Explicit, and unambiguous if your client also sends a Bearer token for
+    something else.
   </Card>
   <Card title="Authorization: Bearer" icon="robot">
     ```
     Authorization: Bearer hpx_...
     ```
 
-    For the LLM gateway, so **OpenAI-compatible SDKs work unmodified**.
+    The standard slot, so **OpenAI-compatible SDKs work unmodified** — and so
+    `auth=`, `--user` and generated clients need no custom header.
   </Card>
 </CardGroup>
 
+<Note>
+  If you send both, `X-API-Key` is used. That is what lets an SDK which pins
+  `Authorization` to its own token still authenticate with your key.
+</Note>
+
 ```bash Deterministic DRG classification
 curl -X POST https://api.v2.healthproximate.com/api/v1/drg/classify/ \
-  -H "X-API-Key: hpx_..." \
+  -H "Authorization: Bearer hpx_..." \
   -H "Content-Type: application/json" \
   -d '{"dx_codes": ["A41.9", "J96.01"], "pr_codes": [], "gender": "F", "is_alive": true}'
 ```
@@ -48,6 +59,9 @@ A key may be issued with scopes that narrow which endpoints it can reach:
 
 An out-of-scope call returns **403**, and the body names the scopes your key
 holds. That is a request for access, not a reason to rotate the key.
+
+A **401** means the credential itself was not accepted — an unknown, revoked or
+expired key. Only a 401 is a reason to check the key you are sending.
 
 ## Rotation, expiry and sandbox keys
 
