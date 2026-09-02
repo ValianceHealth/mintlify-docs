@@ -238,10 +238,17 @@ paths:
         \ rather than returning residue silently.\n\n**Tool calling** is supported: send OpenAI-style\
         \ `tools`, receive `tool_calls`\nwith your values re-hydrated. Your `tool` role results are redacted\
         \ on the way\nout like any other message, and so are the arguments of an assistant turn you\n\
-        send back.\n\n**Not supported** (refused, not silently dropped): streaming while re-hydrating\n\
-        (`stream` with `redact_only=false`), tools combined with `stream`, non-text\ncontent parts, forcing\
-        \ a specific tool via `tool_choice`, and the deprecated\n`functions`/`function_call` form.\n \
-        \   "
+        send back.\n\n**Long answers: stream them.** A non-streamed request must complete inside a\nfixed\
+        \ budget, and a model that has not answered by then returns `504` with\n`error.type: \"model_timeout\"\
+        ` naming the model. The GPT-5.x models are the ones\nthis reaches: their latency on an identical\
+        \ prompt varies widely, measured\nbetween 1.4s and 106.2s. A streamed request is not subject to\
+        \ that budget at\nall, because output arrives continuously — so for long generations send\n`stream=true`\
+        \ together with `redact_only=true`.\n\n**`max_tokens` minimums.** The GPT-5.x models refuse anything\
+        \ below **16** and\nthe request is rejected with `400` before it reaches the provider. Other model\n\
+        families have no such floor.\n\n**Not supported** (refused, not silently dropped): streaming while\
+        \ re-hydrating\n(`stream` with `redact_only=false`), tools combined with `stream`, non-text\n\
+        content parts, forcing a specific tool via `tool_choice`, and the deprecated\n`functions`/`function_call`\
+        \ form.\n    "
       summary: PHI-safe chat completion (OpenAI-compatible)
       tags:
       - Gateway
@@ -270,6 +277,9 @@ paths:
           description: Rate limit or spend limit reached
         '503':
           description: Redaction failed — request refused
+        '504':
+          description: The model did not answer inside the budget for a non-streamed request. Retry, or
+            send stream=true with redact_only=true.
   /api/v1/llm/models:
     get:
       operationId: llm_list_models
