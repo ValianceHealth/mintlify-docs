@@ -1,81 +1,69 @@
 ---
 title: "Models"
-description: "The full model catalog the gateway serves, grouped by provider, with the processor and assessment status of every model."
+description: "Every model an API key can call, where each one runs, and what the provider retains."
 ---
 
-The gateway serves models from five providers. Every model runs under a signed BAA — AWS or Microsoft. Whatever model you pick, the redaction path is identical: identifiers never reach the model.
+{/* The source of this page is docs/api/models.mdx in healthproximate.
+    sync-commercial-docs.yml copies it here. Edit it there, not here.
+    ai/tests/test_residency_page.py fails that build if this table and the
+    model clearances disagree. */}
 
-**Where each model processes your data is covered by our PDPA Transfer Impact Assessment**, which names every destination. We share it under NDA — ask us, and ask before you build against a model if residency is a requirement for you.
+An API key can call only the models on this page. Every other model id returns
+`400` with `code: "model_not_allowed"`. The list is the same for every
+customer.
 
-**The assessment is ours to complete, not yours to negotiate.** A model whose destination we have assessed is callable by every customer. One we have not assessed is callable by none, and returns `403` with `code: "model_not_allowed"` until that changes. The **Transfer assessment** column below tells you which is which today.
+A model is on this page because we assessed where it runs. Each one has a
+named destination and its own PDPA transfer impact assessment (TIA). We share
+the TIA under NDA. If residency is a requirement for you, ask before you build.
 
-If you omit `model`, the gateway uses `apac.amazon.nova-pro-v1:0`.
+Whatever model you pick, the redaction path is the same: identifiers do not
+reach the model.
 
-**Read the model ID as a destination, not just a capability.** A prefix names where inference happens: `apac.` is the ten Asia-Pacific AWS regions, `us.` is the United States, `in.` is India, and `jp.` is Japan. A model ID with no such prefix, or with `global.`, is served from a pool that names no single jurisdiction — which is why those cannot carry a completed assessment, whatever their BAA status. A signed BAA covers the *service*; a transfer assessment needs the *country*. Both are required, and they are not the same question.
+`model` is required on every request. There is no default model.
 
-Every model in this catalog supports [tool calling](/api/tool-calling). Models without tool support are not listed.
+## Asia-Pacific
 
-## Amazon
-
-| Model ID | Tier | Processor | Transfer assessment |
+| Model ID | Processor | Runs in | Provider retention |
 | --- | --- | --- | --- |
-| `apac.amazon.nova-pro-v1:0` | Standard (default) | AWS Bedrock — BAA, HIPAA-aligned | Complete |
-| `apac.amazon.nova-lite-v1:0` | Light | AWS Bedrock — BAA, HIPAA-aligned | Complete |
-| `apac.amazon.nova-micro-v1:0` | Micro | AWS Bedrock — BAA, HIPAA-aligned | Complete |
+| `apac.amazon.nova-micro-v1:0` | AWS Bedrock, AWS BAA | 10 AWS regions in 7 countries: Australia, India, Indonesia, Japan, Malaysia, Singapore, South Korea | None |
+| `apac.amazon.nova-lite-v1:0` | AWS Bedrock, AWS BAA | As above | None |
+| `apac.amazon.nova-pro-v1:0` | AWS Bedrock, AWS BAA | As above | None |
 
-The default family, and the one with a completed assessment. Pick these unless you have a reason not to.
+Only these models stay in Asia-Pacific. "Asia-Pacific" is the AWS region set,
+not Malaysia only. If you need in-country processing, talk to us.
 
-## Anthropic
+## India
 
-| Model ID | Tier | Processor | Transfer assessment |
+| Model ID | Processor | Runs in | Provider retention |
 | --- | --- | --- | --- |
-| `global.anthropic.claude-opus-5` | Frontier (most capable) | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
-| `global.anthropic.claude-sonnet-5` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
-| `global.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
+| `in.openai.gpt-5.6-luna` | AWS Bedrock, AWS BAA | India: `ap-south-1`, `ap-south-2` | Abuse-detection exception, see below |
+| `in.openai.gpt-5.6-terra` | AWS Bedrock, AWS BAA | India: `ap-south-1`, `ap-south-2` | Abuse-detection exception, see below |
 
-Same AWS account and BAA as the Nova family. The BAA is not the open question — the destination is. A `global.` profile routes to whichever region has capacity, so there is no single country to assess, and by the rule above that keeps the assessment Open. An APAC-resident Claude exists on a `jp.` profile and would close it; that route is not served here yet.
+## United States
 
-## OpenAI
-
-| Model ID | Tier | Processor | Transfer assessment |
+| Model ID | Processor | Runs in | Provider retention |
 | --- | --- | --- | --- |
-| `us.openai.gpt-5.6-terra` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — United States |
-| `us.openai.gpt-5.6-luna` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — United States |
-| `us.openai.gpt-5.6-sol` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — United States |
-| `in.openai.gpt-5.6-terra` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — India |
-| `in.openai.gpt-5.6-luna` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — India |
-| `global.openai.gpt-5.6-terra` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
-| `global.openai.gpt-5.6-luna` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
-| `global.openai.gpt-5.6-sol` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
-| `openai.gpt-oss-120b-1:0` | Open-weight | AWS Bedrock — BAA, HIPAA-aligned | Open |
-| `openai.gpt-oss-20b-1:0` | Open-weight, fast | AWS Bedrock — BAA, HIPAA-aligned | Open |
+| `us.anthropic.claude-sonnet-5` | AWS Bedrock, AWS BAA | `us-east-1`, `us-east-2`, `us-west-2` | None |
+| `us.openai.gpt-5.6-luna` | AWS Bedrock, AWS BAA | `us-east-1`, `us-east-2`, `us-west-2` | Abuse-detection exception, see below |
+| `us.openai.gpt-5.6-sol` | AWS Bedrock, AWS BAA | `us-east-1`, `us-east-2`, `us-west-2` | Abuse-detection exception, see below |
+| `us.openai.gpt-5.6-terra` | AWS Bedrock, AWS BAA | `us-east-1`, `us-east-2`, `us-west-2` | Abuse-detection exception, see below |
+| `DeepSeek-V4-Flash` | Azure AI Foundry, Microsoft BAA | United States (Data Zone) | None |
+| `DeepSeek-V4-Pro` | Azure AI Foundry, Microsoft BAA | United States (Data Zone) | None |
 
-**The `us.` and `in.` prefixes are the destination.** These are the same GPT-5.6 models, served from a single named jurisdiction — the United States, or India — rather than from a pool. That is what makes their assessment completable, and it is why the prefix is part of the model ID rather than a separate parameter: naming the model names the destination.
+Claude has no Asia-Pacific route. The `global.*` Claude profiles name no
+destination, so the gateway refuses them.
 
-Pick `in.` for the shortest chain — one country, one assessment. Pick `us.` for the widest capacity. The `global.` rows are the same three models served from a worldwide pool: same BAA, same processor, but no single country to assess — so they stay Open, and clinical traffic belongs on a prefixed id.
+## What "provider retention" means
 
-<Warning>
-  **The GPT-5.6 family retains flagged traffic for up to 30 days.** AWS applies zero data retention to Bedrock by default, but the GPT-5.6 family is an exception: traffic flagged by its abuse classifier is held up to 30 days for automated review, in the region that processed the request. It is not shared with OpenAI. If that does not suit your use case, pick a Nova or `gpt-oss` model — neither carries the exception.
-</Warning>
+- **None**: the provider keeps no copy of your request or of the answer.
+- **Abuse-detection exception**: AWS's abuse classifier runs on GPT-5.6
+  traffic. If it flags a request, AWS keeps that request for up to 30 days for
+  automated review, in the region that processed it. AWS does not share it
+  with OpenAI. If your policy forbids any provider-side retention, use a Nova,
+  Claude or DeepSeek model.
+- On Azure, automated real-time review can still run. It stores nothing.
 
-Dialect note: the AWS-served GPT-5.6 route speaks Bedrock Converse. The gateway routes by model ID, so **your request format does not change**.
-
-## DeepSeek
-
-| Model ID | Tier | Processor | Transfer assessment |
-| --- | --- | --- | --- |
-| `DeepSeek-V4-Flash` | Fast | Azure AI Foundry — Microsoft BAA | Open |
-| `deepseek.v3.2` | Reasoning | AWS Bedrock — BAA, HIPAA-aligned | Open |
-
-## MiniMax
-
-| Model ID | Tier | Processor | Transfer assessment |
-| --- | --- | --- | --- |
-| `minimax.minimax-m2.5` | Reasoning | AWS Bedrock — BAA, HIPAA-aligned | Open |
-
-Note: this model emits reasoning tokens billed as output, so its cost per task runs above its per-token rate card.
-
-## Choosing a model
+## Calling a model
 
 ```bash
 curl https://api.v2.healthproximate.com/api/v1/llm/chat/completions \
@@ -87,17 +75,22 @@ curl https://api.v2.healthproximate.com/api/v1/llm/chat/completions \
   }'
 ```
 
-<Info>
-  **The catalog is the same for every customer.** A model is callable once its destination is covered by our transfer assessment, and refused until then — the same set for everyone, not a per-account menu. Models not yet covered return `403` with `code: "model_not_allowed"`.
+`GET /api/v1/llm/models` returns the models your key can call, in the OpenAI
+list shape.
 
-  There is no region or routing parameter on the request. The model you name determines how it is served, so the model id is the whole choice — not a per-call flag we would have to trust the caller to set.
+<Info>
+  There is no region or routing parameter on the request. The model id
+  decides where the request runs, so the model id is the whole choice.
 </Info>
+
+Tool calls work as described in [tool calling](/api/tool-calling).
 
 ## Errors you may see
 
 | Status | Code | Meaning |
 | --- | --- | --- |
-| `403` | `model_not_allowed` | This model's destination is not yet covered by our transfer assessment, so it is not callable by anyone. Pick a model whose **Transfer assessment** reads Complete. |
-| `503` | — | The redaction engine is unavailable. The gateway fails closed rather than forward un-redacted text. |
+| `400` | `model_not_allowed` | The model is not on this page. Pick one that is. |
+| `403` | `{"error": "model_not_allowed"}` | Your organization is on the free plan, which cannot call these models. This body is not OpenAI-shaped. Contact us to upgrade. |
+| `503` | — | The redaction engine is unavailable. The gateway fails closed. It does not send text that is not redacted. |
 
 See [Errors & limits](/api/errors-and-limits) for the full error contract.

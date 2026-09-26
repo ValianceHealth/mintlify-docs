@@ -273,10 +273,18 @@ paths:
           description: Invalid request, or model not approved
         '401':
           description: Authentication required
+        '402':
+          description: 'Insufficient prepaid credit (PAID tier only). The worst-case cost of the call
+            -- its input plus max_tokens at the output rate -- is held before the model runs; when the
+            wallet cannot cover that hold the call is refused here and nothing is charged. Top up and
+            retry. Deliberately NOT 401 (the key is valid) and NOT 429 (nothing is rate limited): an SDK
+            that retries a 429 would only hammer a wallet that needs money. `available_minor` is in the
+            wallet''s own minor units.'
         '429':
           description: Rate limit or spend limit reached
         '503':
-          description: Redaction failed — request refused
+          description: 'Redaction failed — request refused. Or `error.code: capacity_exhausted` — this
+            task''s gateway capacity is fully committed to in-flight requests (VAL-1000); retry shortly.'
         '504':
           description: The model did not answer inside the budget for a non-streamed request. Retry, or
             send stream=true with redact_only=true.
@@ -296,6 +304,542 @@ paths:
           description: An OpenAI-shaped model list
         '401':
           description: Missing or invalid API key
+  /api/v1/omop/code/:
+    post:
+      operationId: v1_omop_code_create
+      description: 'Resolve free text to concepts in one vocabulary.
+
+
+        Retrieval routing (graph vs hybrid, and whether to narrow by OMOP domain) is chosen from the vocabulary
+        capability registry, so callers do not need to know it. The `routing` block in every response
+        reports what was chosen and the `evidence` behind it.
+
+
+        Vocabularies whose routing has never been benchmarked are **served, not refused** — the response
+        carries `measured: false` and a `caveat`.
+
+
+        **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
+      summary: Resolve text to concepts (API)
+      parameters:
+      - in: query
+        name: response_format
+        schema:
+          type: string
+          enum:
+          - json
+          - llm
+          default: json
+        description: Response format. 'json' (default) returns structured JSON. 'llm' returns compact
+          markdown tables (text/markdown) optimized for LLM consumption. When 'llm', the response body
+          is markdown text rather than the JSON schema shown below.
+      tags:
+      - Vocabulary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CodeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CodeRequestRequest'
+        required: true
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeResponse'
+          description: Ranked concepts plus the routing decision behind them
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Invalid or missing authentication. Provide either Authorization header (Bearer
+            token) or X-API-Key header.
+  /api/v1/omop/resolve/:
+    post:
+      operationId: v1_omop_resolve_create
+      description: 'Normalizes a clinical term and enriches results with ancestors, descendants, cross-vocabulary
+        mappings, and concept relationships.
+
+
+        Supports filtering by vocabulary, domain, and concept class. Results can be sorted by relevance
+        score (default) or concept_class_id.
+
+
+        **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
+      summary: Resolve a clinical term with full ontology context (API)
+      parameters:
+      - in: query
+        name: response_format
+        schema:
+          type: string
+          enum:
+          - json
+          - llm
+          default: json
+        description: Response format. 'json' (default) returns structured JSON. 'llm' returns compact
+          markdown tables (text/markdown) optimized for LLM consumption. When 'llm', the response body
+          is markdown text rather than the JSON schema shown below.
+      tags:
+      - Vocabulary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResolveRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResolveRequestRequest'
+        required: true
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveResponse'
+          description: Resolved concepts with ontology context
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Invalid or missing authentication. Provide either Authorization header (Bearer
+            token) or X-API-Key header.
+  /api/v1/omop/resolve/ancestors/:
+    post:
+      operationId: v1_omop_resolve_ancestors_create
+      description: 'Returns ancestor (parent) concepts in the OMOP hierarchy for a given concept.
+
+
+        **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
+      summary: Get ancestor concepts (API)
+      parameters:
+      - in: query
+        name: response_format
+        schema:
+          type: string
+          enum:
+          - json
+          - llm
+          default: json
+        description: Response format. 'json' (default) returns structured JSON. 'llm' returns compact
+          markdown tables (text/markdown) optimized for LLM consumption. When 'llm', the response body
+          is markdown text rather than the JSON schema shown below.
+      tags:
+      - Vocabulary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetAncestorsRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GetAncestorsRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GetAncestorsRequestRequest'
+        required: true
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AncestorsResponse'
+          description: Ancestor concepts with separation levels
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Invalid or missing authentication. Provide either Authorization header (Bearer
+            token) or X-API-Key header.
+  /api/v1/omop/resolve/descendants/:
+    post:
+      operationId: v1_omop_resolve_descendants_create
+      description: 'Returns descendant (child) concepts in the OMOP hierarchy for a given concept.
+
+
+        **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
+      summary: Get descendant concepts (API)
+      parameters:
+      - in: query
+        name: response_format
+        schema:
+          type: string
+          enum:
+          - json
+          - llm
+          default: json
+        description: Response format. 'json' (default) returns structured JSON. 'llm' returns compact
+          markdown tables (text/markdown) optimized for LLM consumption. When 'llm', the response body
+          is markdown text rather than the JSON schema shown below.
+      tags:
+      - Vocabulary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetDescendantsRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GetDescendantsRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GetDescendantsRequestRequest'
+        required: true
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescendantsResponse'
+          description: Descendant concepts with separation levels
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Invalid or missing authentication. Provide either Authorization header (Bearer
+            token) or X-API-Key header.
+  /api/v1/omop/resolve/expand/:
+    post:
+      operationId: v1_omop_resolve_expand_create
+      description: 'Expands a broad clinical concept (e.g., ''eczema'') into all related OMOP concepts
+        by searching for matching concepts, traversing up to ancestors, and collecting all descendants.
+        Returns a flat, deduplicated concept set suitable for SQL WHERE clauses.
+
+
+        Accepts one or more vocabularies via `vocabulary_ids` (e.g., `[''ICD10CM'', ''ICD10'']`). The
+        expansion runs independently per vocabulary and merges into a single deduplicated set.
+
+
+        **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
+      summary: Expand a clinical concept into a full concept set (API)
+      parameters:
+      - in: query
+        name: response_format
+        schema:
+          type: string
+          enum:
+          - json
+          - llm
+          default: json
+        description: Response format. 'json' (default) returns structured JSON. 'llm' returns compact
+          markdown tables (text/markdown) optimized for LLM consumption. When 'llm', the response body
+          is markdown text rather than the JSON schema shown below.
+      tags:
+      - Vocabulary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpandRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExpandRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExpandRequestRequest'
+        required: true
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpandResponse'
+          description: Expanded concept set with metadata
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Invalid or missing authentication. Provide either Authorization header (Bearer
+            token) or X-API-Key header.
+  /api/v1/omop/resolve/map/:
+    post:
+      operationId: v1_omop_resolve_map_create
+      description: 'Maps an OMOP concept to equivalent concepts in other vocabularies.
+
+
+        **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
+      summary: Map concept to other vocabularies (API)
+      parameters:
+      - in: query
+        name: response_format
+        schema:
+          type: string
+          enum:
+          - json
+          - llm
+          default: json
+        description: Response format. 'json' (default) returns structured JSON. 'llm' returns compact
+          markdown tables (text/markdown) optimized for LLM consumption. When 'llm', the response body
+          is markdown text rather than the JSON schema shown below.
+      tags:
+      - Vocabulary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapConceptRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MapConceptRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MapConceptRequestRequest'
+        required: true
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapResponse'
+          description: Mapped concepts from target vocabularies
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Invalid or missing authentication. Provide either Authorization header (Bearer
+            token) or X-API-Key header.
+  /api/v1/omop/resolve/normalize/:
+    post:
+      operationId: v1_omop_resolve_normalize_create
+      description: 'Searches for the best-matching OMOP standard concepts for a given clinical term.
+
+
+        Supports filtering by vocabulary, domain, and concept class. Results can be sorted by relevance
+        score (default) or concept_class_id.
+
+
+        **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
+      summary: Normalize a clinical term to OMOP concepts (API)
+      parameters:
+      - in: query
+        name: response_format
+        schema:
+          type: string
+          enum:
+          - json
+          - llm
+          default: json
+        description: Response format. 'json' (default) returns structured JSON. 'llm' returns compact
+          markdown tables (text/markdown) optimized for LLM consumption. When 'llm', the response body
+          is markdown text rather than the JSON schema shown below.
+      tags:
+      - Vocabulary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NormalizeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NormalizeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NormalizeRequestRequest'
+        required: true
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NormalizeResponse'
+          description: Normalized concept results with metadata
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Invalid or missing authentication. Provide either Authorization header (Bearer
+            token) or X-API-Key header.
+  /api/v1/omop/resolve/relationships/:
+    post:
+      operationId: v1_omop_resolve_relationships_create
+      description: 'Returns relationships (e.g. ''Is a'', ''Subsumes'') for a given concept from the concept_relationship
+        table.
+
+
+        **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
+      summary: Get concept relationships (API)
+      parameters:
+      - in: query
+        name: response_format
+        schema:
+          type: string
+          enum:
+          - json
+          - llm
+          default: json
+        description: Response format. 'json' (default) returns structured JSON. 'llm' returns compact
+          markdown tables (text/markdown) optimized for LLM consumption. When 'llm', the response body
+          is markdown text rather than the JSON schema shown below.
+      tags:
+      - Vocabulary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetRelationshipsRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GetRelationshipsRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GetRelationshipsRequestRequest'
+        required: true
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipsResponse'
+          description: Related concepts with relationship types
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Invalid or missing authentication. Provide either Authorization header (Bearer
+            token) or X-API-Key header.
+  /api/v1/omop/resolve/workflow/:
+    post:
+      operationId: v1_omop_resolve_workflow_create
+      description: 'Runs a multi-pass resolution workflow tailored to the vocabulary''s hierarchy. Each
+        pass targets a specific concept class level (e.g., SubChapter, then Code) and optionally fetches
+        descendants, giving structured step-by-step results.
+
+
+        Supported vocabularies: ICD10, ICD10CM, ICD10PCS, ICD9CM, SNOMED, CPT4, HCPCS, RxNorm, LOINC.
+
+
+        **Use this for hierarchical exploration.** For a flat concept set suitable for SQL filtering,
+        use `/api/v1/resolve/expand/` instead.
+
+
+        **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
+      summary: Resolve a clinical term using vocabulary-specific workflow (API)
+      parameters:
+      - in: query
+        name: response_format
+        schema:
+          type: string
+          enum:
+          - json
+          - llm
+          default: json
+        description: Response format. 'json' (default) returns structured JSON. 'llm' returns compact
+          markdown tables (text/markdown) optimized for LLM consumption. When 'llm', the response body
+          is markdown text rather than the JSON schema shown below.
+      tags:
+      - Vocabulary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowRequestRequest'
+        required: true
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+          description: Workflow results grouped by step
+        '400':
+          description: Invalid request or unsupported vocabulary
+        '401':
+          description: Invalid or missing authentication. Provide either Authorization header (Bearer
+            token) or X-API-Key header.
+  /api/v1/omop/translate/:
+    post:
+      operationId: v1_omop_translate_create
+      description: 'Translate a concept code from one vocabulary into another.
+
+
+        Targets are restricted to vocabularies actually loaded in this OMOP install. A target that is
+        not loaded — ICD-11, for example — is **refused with a 400**, never answered with an empty list:
+        empty means "no equivalent exists", which is a different and wrong answer.
+
+
+        Results are `Maps to` targets filtered to standard concepts in the target vocabulary, ordered
+        by concept_id so the choice is deterministic. If the source code has no native concept, the curated
+        crosswalk is consulted and `source.found_via` reports that.
+
+
+        **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
+      summary: Translate a concept between vocabularies (API)
+      parameters:
+      - in: query
+        name: response_format
+        schema:
+          type: string
+          enum:
+          - json
+          - llm
+          default: json
+        description: Response format. 'json' (default) returns structured JSON. 'llm' returns compact
+          markdown tables (text/markdown) optimized for LLM consumption. When 'llm', the response body
+          is markdown text rather than the JSON schema shown below.
+      tags:
+      - Vocabulary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TranslateRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TranslateRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TranslateRequestRequest'
+        required: true
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslateResponse'
+          description: Standard equivalents in the target vocabulary
+        '400':
+          description: Unsupported vocabulary, or bad parameters
+        '404':
+          description: Source code not found
+        '401':
+          description: Invalid or missing authentication. Provide either Authorization header (Bearer
+            token) or X-API-Key header.
   /api/v1/redact/:
     post:
       operationId: v1_redact_create
@@ -380,11 +924,12 @@ paths:
 
 
         Supported vocabularies: ICD10, ICD10CM, ICD10PCS, ICD9CM, ICD9Proc, SNOMED, CPT4, HCPCS, RxNorm,
-        RxNorm Extension, OPCS4, DRG.
+        RxNorm Extension, OPCS4, DRG, LOINC, ICDO3, ATC.
 
 
         A search with no `vocabularies` filter scans ICD10, ICD10CM, ICD10PCS, ICD9CM, ICD9Proc, SNOMED,
-        CPT4, HCPCS, RxNorm, RxNorm Extension. DRG, OPCS4 are supported but must be requested by name.
+        CPT4, HCPCS, RxNorm, RxNorm Extension. ATC, DRG, ICDO3, LOINC, OPCS4 are supported but must be
+        requested by name.
 
 
         Supported domains: Condition, Procedure, Drug, Measurement, Observation, Device, Specimen.'
@@ -498,6 +1043,86 @@ paths:
             token) or X-API-Key header.
         '500':
           description: Internal server error during search
+  /api/v1/search/batch/:
+    post:
+      operationId: v1_search_batch_create
+      description: 'Search many raw terms in a single request. Every term''s query is embedded in ONE
+        batched pass, then each term runs the same hybrid pipeline as `POST /api/v1/search/` (dense +
+        FTS + RRF + cross-encoder rerank). Results are returned in the same order as the input `terms`
+        array, and each term carries a `confidence` signal (top score + margin over the runner-up) so
+        callers can gate on match quality.
+
+
+        Per-term `domain_id`, `vocabularies` and `top_k` override the request-level shared defaults. FTS
+        options are shared across the batch. At most 100 terms per request.
+
+
+        This endpoint always uses hybrid search mode; for graph-mode or relationship expansion use the
+        single-query `POST /api/v1/search/`.
+
+
+        **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
+      summary: Batch search OMOP concepts (API)
+      parameters:
+      - in: query
+        name: response_format
+        schema:
+          type: string
+          enum:
+          - json
+          - llm
+          default: json
+        description: Response format. 'json' (default) returns structured JSON. 'llm' returns compact
+          markdown tables (text/markdown) optimized for LLM consumption. When 'llm', the response body
+          is markdown text rather than the JSON schema shown below.
+      tags:
+      - Vocabulary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchSearchRequestRequest'
+            examples:
+              BatchOfRawTerms:
+                value:
+                  terms:
+                  - query: type 2 diabetes
+                    domain_id: Condition
+                  - query: appendectomy
+                    vocabularies:
+                    - ICD10PCS
+                    top_k: 5
+                  - query: metformin
+                  vocabularies:
+                  - SNOMED
+                  - ICD10CM
+                  top_k: 10
+                summary: Batch of raw terms
+                description: Three terms with shared and per-term filters.
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BatchSearchRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BatchSearchRequestRequest'
+        required: true
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchSearchResponse'
+          description: Per-term search results (input order) with confidence signals
+        '400':
+          description: Invalid request (missing/empty terms, too many terms, missing per-term query, invalid
+            vocabularies/domain, or top_k out of range)
+        '401':
+          description: Invalid or missing authentication (Bearer token or X-API-Key).
+        '500':
+          description: Internal server error during search
   /api/v1/search/domains/:
     get:
       operationId: v1_search_domains_retrieve
@@ -569,8 +1194,350 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+  /api/v1/usage/history/:
+    get:
+      operationId: user_api_usage_history
+      description: 'Returns the authenticated user''s individual API request log as a paginated list over
+        the selected date range, optionally filtered by service type. Scoped to the caller''s own activity:
+        a JWT sees the user''s interactive requests, an API key sees that key''s own requests.'
+      summary: Personal API usage history
+      parameters:
+      - in: query
+        name: end_date
+        schema:
+          type: string
+        description: 'End date (ISO format, default: now)'
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: 'Page number (default: 1)'
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: 'Items per page (default: 20, max: 100)'
+      - in: query
+        name: service_type
+        schema:
+          type: string
+        description: Filter by service type (e.g. "drg_classify", "drg_agent")
+      - in: query
+        name: start_date
+        schema:
+          type: string
+        description: 'Start date (ISO format, default: 30 days ago)'
+      tags:
+      - Account
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserApiUsageHistory'
+          description: ''
+  /api/v1/usage/history/{log_id}/:
+    get:
+      operationId: user_api_usage_detail
+      description: Returns the full detail of a single API request log entry made by the authenticated
+        user, identified by log ID. Returns 404 if the log does not exist or does not belong to the caller.
+      summary: Personal API usage detail
+      parameters:
+      - in: path
+        name: log_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Account
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserApiUsageHistory'
+          description: ''
+        '404':
+          description: Not found
+  /api/v1/usage/summary/:
+    get:
+      operationId: user_api_usage_summary
+      description: 'Returns the authenticated user''s aggregated API usage (request counts, token totals,
+        and cost) over the selected date range, optionally filtered by service type. Scoped to the caller''s
+        own activity: a JWT sees the user''s interactive requests, an API key sees that key''s own requests.'
+      summary: Personal API usage summary
+      parameters:
+      - in: query
+        name: end_date
+        schema:
+          type: string
+        description: 'End date (ISO format, default: now)'
+      - in: query
+        name: service_type
+        schema:
+          type: string
+        description: Filter by service type (e.g. "drg_classify", "drg_agent")
+      - in: query
+        name: start_date
+        schema:
+          type: string
+        description: 'Start date (ISO format, default: 30 days ago)'
+      tags:
+      - Account
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserApiUsageSummary'
+          description: ''
 components:
   schemas:
+    AncestorConcept:
+      type: object
+      properties:
+        concept_id:
+          type: integer
+        concept_name:
+          type: string
+        concept_code:
+          type: string
+        vocabulary_id:
+          type: string
+        concept_class_id:
+          type: string
+        min_levels_of_separation:
+          type: integer
+        max_levels_of_separation:
+          type: integer
+      required:
+      - concept_class_id
+      - concept_code
+      - concept_id
+      - concept_name
+      - max_levels_of_separation
+      - min_levels_of_separation
+      - vocabulary_id
+    AncestorsResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AncestorConcept'
+        metadata:
+          type: object
+          additionalProperties: {}
+      required:
+      - metadata
+      - results
+    BatchSearchConfidence:
+      type: object
+      properties:
+        score_source:
+          nullable: true
+          description: 'Where this term''s similarity scores came from. Only ''cross_encoder'' scores
+            are calibrated cross-encoder logits on a consistent scale; ''rrf''/''rank'' are uncalibrated
+            fallback scores (used for small candidate sets) whose magnitudes are NOT comparable across
+            terms. ''none'' means the term had no results.
+
+
+            * `cross_encoder` - cross_encoder
+
+            * `rrf` - rrf
+
+            * `rank` - rank
+
+            * `none` - none'
+          oneOf:
+          - $ref: '#/components/schemas/ScoreSourceEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        reranked:
+          type: boolean
+          description: True iff score_source == 'cross_encoder'. When False, the numeric confidence fields
+            below are null because fallback scores cannot be safely thresholded.
+        top_score:
+          type: number
+          format: double
+          nullable: true
+          description: Calibrated cross-encoder similarity of the top concept. Null when the term has
+            no results OR was not reranked (see score_source).
+        runner_up_score:
+          type: number
+          format: double
+          nullable: true
+          description: Calibrated cross-encoder similarity of the second concept. Null when fewer than
+            2 results OR the term was not reranked.
+        margin:
+          type: number
+          format: double
+          nullable: true
+          description: top_score - runner_up_score. A large positive margin means a confident, unambiguous
+            top match. Only meaningful when reranked=True; null otherwise (fewer than 2 results or not
+            reranked). Gate acceptance on this ONLY when reranked is True.
+      required:
+      - margin
+      - reranked
+      - runner_up_score
+      - score_source
+      - top_score
+    BatchSearchRequestRequest:
+      type: object
+      description: 'Request body for POST /api/v1/search/batch/.
+
+
+        Embeds every term''s query in a single batched pass, then runs the standard
+
+        per-term hybrid search (dense + FTS + RRF + rerank). Per-term `domain_id`,
+
+        `vocabularies` and `top_k` override the request-level shared defaults.'
+      properties:
+        terms:
+          type: array
+          items:
+            $ref: '#/components/schemas/BatchSearchTermRequest'
+          description: 1-100 terms to search. Order is preserved in the response.
+          maxItems: 100
+          minItems: 1
+        vocabularies:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Default vocabulary filter for terms that don't specify their own.
+        domain_id:
+          type: string
+          minLength: 1
+          description: Default domain filter for terms that don't specify their own.
+        top_k:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 10
+          description: Default result cap for terms that don't specify their own (1-100).
+        search_type:
+          allOf:
+          - $ref: '#/components/schemas/SearchTypeEnum'
+          default: websearch
+          description: 'FTS search type applied to every term.
+
+
+            * `plain` - plain
+
+            * `phrase` - phrase
+
+            * `raw` - raw
+
+            * `websearch` - websearch'
+        language:
+          type: string
+          minLength: 1
+          default: english
+          description: PostgreSQL text search configuration applied to every term.
+        use_search_rank:
+          type: boolean
+          default: true
+          description: Use SearchRank ordering for FTS results.
+        rank_normalization:
+          type: integer
+          default: 0
+          description: SearchRank normalization flags (0-31).
+        min_relevance:
+          type: number
+          format: double
+          nullable: true
+          default: -2.0
+          description: Cross-encoder logit threshold applied to every term. Results below this are dropped.
+            Pass null to disable filtering.
+      required:
+      - terms
+    BatchSearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BatchSearchTermResult'
+          description: Per-term results, in the same order as the input `terms` array.
+        metadata:
+          type: object
+          additionalProperties: {}
+          description: Batch-level metadata (term count, search mode, shared FTS options).
+      required:
+      - metadata
+      - results
+    BatchSearchTermRequest:
+      type: object
+      description: A single term in a batch concept-search request.
+      properties:
+        query:
+          type: string
+          minLength: 1
+          description: Raw term to search (e.g., 'type 2 diabetes').
+        domain_id:
+          type: string
+          minLength: 1
+          description: Per-term domain filter (e.g., 'Condition'). Overrides no shared default.
+        vocabularies:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Per-term vocabulary filter (case-insensitive). Falls back to the request-level
+            `vocabularies`, then to all supported vocabularies.
+        top_k:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Per-term result cap (1-100). Falls back to request-level `top_k`.
+      required:
+      - query
+    BatchSearchTermResult:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Echo of the input term query.
+        domain_id:
+          type: string
+          nullable: true
+          description: Domain filter actually applied for this term.
+        vocabularies:
+          type: array
+          items:
+            type: string
+          description: Vocabularies actually searched for this term (DB casing).
+        top_k:
+          type: integer
+          description: Result cap actually applied for this term.
+        concepts:
+          type: array
+          items:
+            $ref: '#/components/schemas/OMOPConcept'
+          description: Ranked matches, same shape as the single-query endpoint.
+        confidence:
+          allOf:
+          - $ref: '#/components/schemas/BatchSearchConfidence'
+          description: Per-term confidence signal derived from the top two similarities.
+      required:
+      - concepts
+      - confidence
+      - domain_id
+      - query
+      - top_k
+      - vocabularies
     ChatCompletionRequestRequest:
       type: object
       properties:
@@ -674,6 +1641,159 @@ components:
         * `assistant` - assistant
 
         * `tool` - tool'
+    CodeRequestDomainEnum:
+      enum:
+      - Condition
+      - Procedure
+      - Drug
+      - Measurement
+      - Observation
+      - Device
+      - Specimen
+      type: string
+      description: '* `Condition` - Condition
+
+        * `Procedure` - Procedure
+
+        * `Drug` - Drug
+
+        * `Measurement` - Measurement
+
+        * `Observation` - Observation
+
+        * `Device` - Device
+
+        * `Specimen` - Specimen'
+    CodeRequestRequest:
+      type: object
+      description: 'Input to `/code`.
+
+
+        Deliberately small. Routing (graph vs hybrid, and whether to narrow by
+
+        domain) is NOT a request parameter — it comes from the vocabulary
+
+        capability registry, which is the point of the endpoint. `domain` is the
+
+        one override, for a caller who genuinely knows better than the registry.'
+      properties:
+        text:
+          type: string
+          minLength: 1
+          description: Clinical text to resolve, e.g. 'lap appendicectomy'.
+        vocabulary:
+          allOf:
+          - $ref: '#/components/schemas/VocabularyEnum'
+          description: 'Target vocabulary. Every choice here is served; see the `routing.evidence` field
+            in the response for how well each one''s retrieval has been validated.
+
+
+            * `ICD10CM` - ICD10CM
+
+            * `ICD10PCS` - ICD10PCS
+
+            * `CPT4` - CPT4
+
+            * `RxNorm` - RxNorm
+
+            * `SNOMED` - SNOMED'
+        domain:
+          nullable: true
+          description: 'Override the OMOP domain filter. Three distinct inputs:
+
+
+            - **omit** — the vocabulary decides. ICD10PCS narrows to Procedure and RxNorm to Drug, because
+            a filter excludes ~0% of each. ICD10CM, CPT4 and SNOMED stay unfiltered, because narrowing
+            them hides billable concepts behind plausible wrong answers.
+
+            - **a domain** — filter by it, whatever the vocabulary implies.
+
+            - **null** — do NOT filter, even where the vocabulary implies a domain. This is the only way
+            to opt out of an implied filter.
+
+
+            * `Condition` - Condition
+
+            * `Procedure` - Procedure
+
+            * `Drug` - Drug
+
+            * `Measurement` - Measurement
+
+            * `Observation` - Observation
+
+            * `Device` - Device
+
+            * `Specimen` - Specimen'
+          oneOf:
+          - $ref: '#/components/schemas/CodeRequestDomainEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        top_k:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 10
+          description: Number of concepts to return (1-100).
+      required:
+      - text
+      - vocabulary
+    CodeResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        routing:
+          $ref: '#/components/schemas/CodeRouting'
+        metadata:
+          type: object
+          additionalProperties: {}
+      required:
+      - metadata
+      - results
+      - routing
+    CodeRouting:
+      type: object
+      description: What the API decided, and how much it knows about that decision.
+      properties:
+        vocabulary:
+          type: string
+        search_mode:
+          type: string
+          description: 'Retrieval route chosen from the registry: ''graph'' or ''hybrid''.'
+        effective_search_mode:
+          type: string
+          description: Present only when the engine degraded the chosen mode. Reports what actually ran,
+            so `search_mode` is never a statement about intent alone.
+        fallback_reason:
+          type: string
+        domain_filter:
+          type: string
+          nullable: true
+          description: Domain applied, or null if unfiltered.
+        domain_source:
+          type: string
+          nullable: true
+          description: '''caller'' if overridden, ''vocabulary'' if implied, null if none.'
+        evidence:
+          type: string
+          description: 'How well this routing is validated: ''strong'' (a leak-free gold set), ''structural''
+            (forced by a property of the data), ''weak'' (small-n or retracted), ''none'' (never measured).'
+        measured:
+          type: boolean
+          description: False when evidence is 'none'. The answer is served, not validated.
+        caveat:
+          type: string
+          description: Present only when `measured` is false.
+      required:
+      - domain_filter
+      - domain_source
+      - evidence
+      - measured
+      - search_mode
+      - vocabulary
     DRGAgentRequestRequest:
       type: object
       description: Request serializer for the DRG AI agent endpoint.
@@ -688,6 +1808,8 @@ components:
           - $ref: '#/components/schemas/VersionEnum'
           description: 'Optional MS-DRG version hint for the agent
 
+
+            * `v35` - v35
 
             * `v36` - v36
 
@@ -787,6 +1909,8 @@ components:
           description: 'MS-DRG version (default: v40, FY 2023)
 
 
+            * `v35` - v35
+
             * `v36` - v36
 
             * `v37` - v37
@@ -862,6 +1986,8 @@ components:
           description: 'MS-DRG version (default: v40, FY 2023)
 
 
+            * `v35` - v35
+
             * `v36` - v36
 
             * `v37` - v37
@@ -919,6 +2045,113 @@ components:
       - response_time_ms
       - type
       - version
+    DescendantsResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AncestorConcept'
+        metadata:
+          type: object
+          additionalProperties: {}
+      required:
+      - metadata
+      - results
+    ExpandRequestRequest:
+      type: object
+      properties:
+        query:
+          type: string
+          minLength: 1
+          description: Clinical term or concept to expand (e.g., 'eczema', 'diabetes')
+        vocabulary_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Vocabularies to expand within (e.g., ['ICD10CM', 'ICD10'])
+          minItems: 1
+        domain_id:
+          type: string
+          minLength: 1
+          description: Filter by domain (e.g., 'Condition', 'Procedure')
+        max_ancestor_separation:
+          type: integer
+          maximum: 10
+          minimum: 1
+          default: 2
+          description: Max hierarchy levels to ascend (default 2)
+        max_descendant_separation:
+          type: integer
+          maximum: 10
+          minimum: 1
+          default: 4
+          description: Max hierarchy levels to descend (default 4)
+        max_concepts:
+          type: integer
+          maximum: 5000
+          minimum: 1
+          default: 500
+          description: Maximum concepts in result set (default 500)
+        include_mappings:
+          type: boolean
+          default: false
+          description: Include cross-vocabulary mappings for each concept
+        target_vocabularies:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Target vocabularies for mappings (e.g., ['SNOMED'])
+      required:
+      - query
+      - vocabulary_ids
+    ExpandResponse:
+      type: object
+      properties:
+        results:
+          $ref: '#/components/schemas/ExpandResults'
+        metadata:
+          type: object
+          additionalProperties: {}
+      required:
+      - metadata
+      - results
+    ExpandResults:
+      type: object
+      properties:
+        concept_ids:
+          type: array
+          items:
+            type: integer
+        concepts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpandedConcept'
+      required:
+      - concept_ids
+      - concepts
+    ExpandedConcept:
+      type: object
+      properties:
+        concept_id:
+          type: integer
+        concept_name:
+          type: string
+        concept_code:
+          type: string
+        vocabulary_id:
+          type: string
+        concept_class_id:
+          type: string
+          nullable: true
+      required:
+      - concept_class_id
+      - concept_code
+      - concept_id
+      - concept_name
+      - vocabulary_id
     GenderEnum:
       enum:
       - F
@@ -927,6 +2160,168 @@ components:
       description: '* `F` - F
 
         * `M` - M'
+    GetAncestorsRequestRequest:
+      type: object
+      properties:
+        concept_id:
+          type: integer
+          description: Source concept ID
+        max_separation:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Maximum levels of separation (null for unlimited)
+        vocabulary_id:
+          type: string
+          minLength: 1
+          description: Filter ancestors by vocabulary
+        include_paths:
+          type: boolean
+          default: true
+          description: Include ordered hierarchy chains (direct parent -> root) in the response. Paths
+            ignore the vocabulary_id filter since chains may cross vocabularies.
+      required:
+      - concept_id
+    GetDescendantsRequestRequest:
+      type: object
+      properties:
+        concept_id:
+          type: integer
+          description: Source concept ID
+        max_separation:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Maximum levels of separation (null for unlimited)
+        vocabulary_id:
+          type: string
+          minLength: 1
+          description: Filter descendants by vocabulary
+        include_paths:
+          type: boolean
+          default: true
+          description: Include ordered hierarchy chains (direct child -> leaf) in the response. Paths
+            ignore the vocabulary_id filter since chains may cross vocabularies.
+      required:
+      - concept_id
+    GetRelationshipsRequestRequest:
+      type: object
+      properties:
+        concept_id:
+          type: integer
+          description: Source concept ID
+      required:
+      - concept_id
+    MapConceptRequestRequest:
+      type: object
+      properties:
+        concept_id:
+          type: integer
+          description: Source concept ID to map
+        target_vocabularies:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Target vocabularies for mapping (e.g., ['SNOMED', 'ICD10CM'])
+        relationship_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: 'Relationship types to follow (default: [''Maps to''])'
+      required:
+      - concept_id
+    MapResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MappedConcept'
+        metadata:
+          type: object
+          additionalProperties: {}
+      required:
+      - metadata
+      - results
+    MappedConcept:
+      type: object
+      properties:
+        concept_id:
+          type: integer
+        concept_name:
+          type: string
+        concept_code:
+          type: string
+        vocabulary_id:
+          type: string
+        concept_class_id:
+          type: string
+        relationship_id:
+          type: string
+      required:
+      - concept_class_id
+      - concept_code
+      - concept_id
+      - concept_name
+      - relationship_id
+      - vocabulary_id
+    NormalizeRequestRequest:
+      type: object
+      properties:
+        query:
+          type: string
+          minLength: 1
+          description: Search query to normalize
+        vocabularies:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Vocabularies to search (e.g., ['SNOMED', 'ICD10CM'])
+        domain_id:
+          type: string
+          minLength: 1
+          description: Filter by domain (e.g., 'Condition')
+        concept_class_id:
+          type: string
+          minLength: 1
+          description: Filter by concept class (e.g., 'Clinical Finding', 'Ingredient')
+        top_k:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 5
+          description: Number of results to return (1-100)
+        sort_by:
+          allOf:
+          - $ref: '#/components/schemas/OmopSortByEnum'
+          default: score
+          description: 'Sort results by: ''score'' (relevance, default) or ''concept_class_id'' (alphabetical)
+
+
+            * `score` - score
+
+            * `concept_class_id` - concept_class_id'
+      required:
+      - query
+    NormalizeResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResolvedConcept'
+        metadata:
+          type: object
+          additionalProperties: {}
+      required:
+      - metadata
+      - results
+    NullEnum:
+      enum:
+      - null
     OMOPConcept:
       type: object
       properties:
@@ -980,6 +2375,14 @@ components:
       - concept_id
       - concept_name
       - vocabulary_id
+    OmopSortByEnum:
+      enum:
+      - score
+      - concept_class_id
+      type: string
+      description: '* `score` - score
+
+        * `concept_class_id` - concept_class_id'
     ParentConcept:
       type: object
       properties:
@@ -1046,6 +2449,157 @@ components:
       - mapping
       - redacted_text
       - redaction_receipt
+    RelationshipsResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MappedConcept'
+        metadata:
+          type: object
+          additionalProperties: {}
+      required:
+      - metadata
+      - results
+    ResolveRequestRequest:
+      type: object
+      properties:
+        query:
+          type: string
+          minLength: 1
+          description: Search query to resolve
+        vocabularies:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Vocabularies to search
+        domain_id:
+          type: string
+          minLength: 1
+          description: Filter by domain
+        concept_class_id:
+          type: string
+          minLength: 1
+          description: Filter by concept class (e.g., 'Clinical Finding', 'Ingredient')
+        top_k:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 5
+          description: Number of results to return (1-100)
+        sort_by:
+          allOf:
+          - $ref: '#/components/schemas/OmopSortByEnum'
+          default: score
+          description: 'Sort results by: ''score'' (relevance, default) or ''concept_class_id'' (alphabetical)
+
+
+            * `score` - score
+
+            * `concept_class_id` - concept_class_id'
+        include_ancestors:
+          type: boolean
+          default: true
+          description: Include ancestor concepts
+        include_descendants:
+          type: boolean
+          default: false
+          description: Include descendant concepts
+        include_mappings:
+          type: boolean
+          default: true
+          description: Include cross-vocabulary mappings
+        max_separation:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Maximum hierarchy levels for ancestors/descendants
+        target_vocabularies:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Target vocabularies for mappings
+        include_relationships:
+          type: boolean
+          default: false
+          description: Include concept relationships (e.g. 'Is a', 'Subsumes')
+      required:
+      - query
+    ResolveResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResolvedConcept'
+        metadata:
+          type: object
+          additionalProperties: {}
+      required:
+      - metadata
+      - results
+    ResolvedConcept:
+      type: object
+      properties:
+        concept_id:
+          type: integer
+        concept_name:
+          type: string
+        concept_code:
+          type: string
+        vocabulary_id:
+          type: string
+        concept_class_id:
+          type: string
+          nullable: true
+        score:
+          type: number
+          format: double
+          nullable: true
+        ancestors:
+          type: array
+          items:
+            $ref: '#/components/schemas/AncestorConcept'
+          nullable: true
+        descendants:
+          type: array
+          items:
+            $ref: '#/components/schemas/AncestorConcept'
+          nullable: true
+        mappings:
+          type: array
+          items:
+            $ref: '#/components/schemas/MappedConcept'
+          nullable: true
+        relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/MappedConcept'
+          nullable: true
+      required:
+      - concept_class_id
+      - concept_code
+      - concept_id
+      - concept_name
+      - score
+      - vocabulary_id
+    ScoreSourceEnum:
+      enum:
+      - cross_encoder
+      - rrf
+      - rank
+      - none
+      type: string
+      description: '* `cross_encoder` - cross_encoder
+
+        * `rrf` - rrf
+
+        * `rank` - rank
+
+        * `none` - none'
     SearchFTSOptionsMetadata:
       type: object
       properties:
@@ -1260,6 +2814,53 @@ components:
       - icd10cm
       type: string
       description: '* `icd10cm` - icd10cm'
+    SourceVocabularyEnum:
+      enum:
+      - ICD10
+      - ICD10CM
+      - ICD10PCS
+      - ICD9CM
+      - ICD9Proc
+      - SNOMED
+      - CPT4
+      - HCPCS
+      - RxNorm
+      - RxNorm Extension
+      - OPCS4
+      - DRG
+      - LOINC
+      - ICDO3
+      - ATC
+      type: string
+      description: '* `ICD10` - ICD10
+
+        * `ICD10CM` - ICD10CM
+
+        * `ICD10PCS` - ICD10PCS
+
+        * `ICD9CM` - ICD9CM
+
+        * `ICD9Proc` - ICD9Proc
+
+        * `SNOMED` - SNOMED
+
+        * `CPT4` - CPT4
+
+        * `HCPCS` - HCPCS
+
+        * `RxNorm` - RxNorm
+
+        * `RxNorm Extension` - RxNorm Extension
+
+        * `OPCS4` - OPCS4
+
+        * `DRG` - DRG
+
+        * `LOINC` - LOINC
+
+        * `ICDO3` - ICDO3
+
+        * `ATC` - ATC'
     SupportedDomainsResponse:
       type: object
       properties:
@@ -1283,8 +2884,332 @@ components:
       required:
       - domains
       - vocabularies
+    TargetVocabularyEnum:
+      enum:
+      - ICD10
+      - ICD10CM
+      - ICD10PCS
+      - ICD9CM
+      - ICD9Proc
+      - SNOMED
+      - CPT4
+      - HCPCS
+      - RxNorm
+      - RxNorm Extension
+      - OPCS4
+      - DRG
+      - LOINC
+      - ICDO3
+      - ATC
+      type: string
+      description: '* `ICD10` - ICD10
+
+        * `ICD10CM` - ICD10CM
+
+        * `ICD10PCS` - ICD10PCS
+
+        * `ICD9CM` - ICD9CM
+
+        * `ICD9Proc` - ICD9Proc
+
+        * `SNOMED` - SNOMED
+
+        * `CPT4` - CPT4
+
+        * `HCPCS` - HCPCS
+
+        * `RxNorm` - RxNorm
+
+        * `RxNorm Extension` - RxNorm Extension
+
+        * `OPCS4` - OPCS4
+
+        * `DRG` - DRG
+
+        * `LOINC` - LOINC
+
+        * `ICDO3` - ICDO3
+
+        * `ATC` - ATC'
+    TranslateConcept:
+      type: object
+      properties:
+        concept_id:
+          type: integer
+        concept_name:
+          type: string
+        concept_code:
+          type: string
+        vocabulary_id:
+          type: string
+        concept_class_id:
+          type: string
+          nullable: true
+        standard_concept:
+          type: string
+          nullable: true
+      required:
+      - concept_class_id
+      - concept_code
+      - concept_id
+      - concept_name
+      - standard_concept
+      - vocabulary_id
+    TranslateRequestRequest:
+      type: object
+      description: 'Input to `/translate`.
+
+
+        Both vocabularies are ChoiceFields over the LOADED partitions, so an
+
+        unloaded target (ICD-11) is refused at validation with a 400 naming the
+
+        supported set. That refusal is the feature: answering with an empty list
+
+        would say "no equivalent exists", which is a different and wrong answer.'
+      properties:
+        concept_code:
+          type: string
+          minLength: 1
+          description: Source concept code, e.g. 'K35.80'.
+        source_vocabulary:
+          allOf:
+          - $ref: '#/components/schemas/SourceVocabularyEnum'
+          description: 'Vocabulary the code belongs to.
+
+
+            * `ICD10` - ICD10
+
+            * `ICD10CM` - ICD10CM
+
+            * `ICD10PCS` - ICD10PCS
+
+            * `ICD9CM` - ICD9CM
+
+            * `ICD9Proc` - ICD9Proc
+
+            * `SNOMED` - SNOMED
+
+            * `CPT4` - CPT4
+
+            * `HCPCS` - HCPCS
+
+            * `RxNorm` - RxNorm
+
+            * `RxNorm Extension` - RxNorm Extension
+
+            * `OPCS4` - OPCS4
+
+            * `DRG` - DRG
+
+            * `LOINC` - LOINC
+
+            * `ICDO3` - ICDO3
+
+            * `ATC` - ATC'
+        target_vocabulary:
+          allOf:
+          - $ref: '#/components/schemas/TargetVocabularyEnum'
+          description: 'Vocabulary to translate into. Must be loaded in this OMOP install. ICD-11 is NOT
+            loaded — it exists here only as a rulebook, not a mapped vocabulary — so it is refused rather
+            than answered with nothing.
+
+
+            * `ICD10` - ICD10
+
+            * `ICD10CM` - ICD10CM
+
+            * `ICD10PCS` - ICD10PCS
+
+            * `ICD9CM` - ICD9CM
+
+            * `ICD9Proc` - ICD9Proc
+
+            * `SNOMED` - SNOMED
+
+            * `CPT4` - CPT4
+
+            * `HCPCS` - HCPCS
+
+            * `RxNorm` - RxNorm
+
+            * `RxNorm Extension` - RxNorm Extension
+
+            * `OPCS4` - OPCS4
+
+            * `DRG` - DRG
+
+            * `LOINC` - LOINC
+
+            * `ICDO3` - ICDO3
+
+            * `ATC` - ATC'
+      required:
+      - concept_code
+      - source_vocabulary
+      - target_vocabulary
+    TranslateResponse:
+      type: object
+      properties:
+        source:
+          $ref: '#/components/schemas/TranslateSource'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslateConcept'
+        metadata:
+          type: object
+          additionalProperties: {}
+      required:
+      - metadata
+      - results
+      - source
+    TranslateSource:
+      type: object
+      description: 'What was asked for, and what it resolved to — kept apart.
+
+
+        On a curated-crosswalk hit these MAY differ. The curated map takes WHO
+
+        ICD-10 source codes to ICD-10-CM concepts
+
+        (`crosswalk_writer.TARGET_VOCABULARY`), so a caller who named `ICD10`
+
+        gets back an `ICD10CM` concept, while a caller who named `ICD10CM` gets
+
+        one in the vocabulary they asked for.
+
+
+        Because it is "may" and not "always", nothing may assume a difference —
+
+        compare the two fields. A flat payload invited callers to read the
+
+        resolved concept as the thing they asked about, which is the error this
+
+        split exists to prevent.'
+      properties:
+        requested_code:
+          type: string
+          description: The code the caller sent, verbatim.
+        requested_vocabulary:
+          type: string
+          description: The vocabulary the caller said the code belongs to.
+        found_via:
+          type: string
+          description: '''concept'' when the requested code is a native OMOP concept, ''curated_crosswalk''
+            when it was resolved through the curated local mapping table (WHO ICD-10 source codes to ICD-10-CM
+            concepts). On ''curated_crosswalk'', `resolved_concept` is the mapped concept, which MAY be
+            in a different vocabulary from `requested_vocabulary` — compare the two rather than assuming.'
+        resolved_concept:
+          allOf:
+          - $ref: '#/components/schemas/TranslateConcept'
+          description: The OMOP concept the request resolved to, whichever route found it.
+      required:
+      - found_via
+      - requested_code
+      - requested_vocabulary
+      - resolved_concept
+    UserApiUsageHistory:
+      type: object
+      description: Response serializer for user's API usage history list item.
+      properties:
+        id:
+          type: string
+          format: uuid
+        service_type:
+          type: string
+        endpoint:
+          type: string
+        status_code:
+          type: integer
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        cost:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,6})?$
+        response_time_ms:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        request_body:
+          nullable: true
+        response_body:
+          nullable: true
+        request_redacted:
+          type: boolean
+        response_redacted:
+          type: boolean
+        error_message:
+          type: string
+          nullable: true
+      required:
+      - cost
+      - created_at
+      - endpoint
+      - error_message
+      - id
+      - input_tokens
+      - output_tokens
+      - request_body
+      - request_redacted
+      - response_body
+      - response_redacted
+      - response_time_ms
+      - service_type
+      - status_code
+    UserApiUsageSummary:
+      type: object
+      description: Response serializer for user's personal API usage summary.
+      properties:
+        total_requests:
+          type: integer
+        successful_requests:
+          type: integer
+        failed_requests:
+          type: integer
+        success_rate:
+          type: number
+          format: double
+        total_input_tokens:
+          type: integer
+        total_output_tokens:
+          type: integer
+        total_tokens:
+          type: integer
+        total_cost:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,6})?$
+        avg_response_time_ms:
+          type: number
+          format: double
+          nullable: true
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+      required:
+      - avg_response_time_ms
+      - failed_requests
+      - period_end
+      - period_start
+      - success_rate
+      - successful_requests
+      - total_cost
+      - total_input_tokens
+      - total_output_tokens
+      - total_requests
+      - total_tokens
     VersionEnum:
       enum:
+      - v35
       - v36
       - v37
       - v38
@@ -1292,7 +3217,9 @@ components:
       - v40
       - v43
       type: string
-      description: '* `v36` - v36
+      description: '* `v35` - v35
+
+        * `v36` - v36
 
         * `v37` - v37
 
@@ -1303,6 +3230,100 @@ components:
         * `v40` - v40
 
         * `v43` - v43'
+    VocabularyEnum:
+      enum:
+      - ICD10CM
+      - ICD10PCS
+      - CPT4
+      - RxNorm
+      - SNOMED
+      type: string
+      description: '* `ICD10CM` - ICD10CM
+
+        * `ICD10PCS` - ICD10PCS
+
+        * `CPT4` - CPT4
+
+        * `RxNorm` - RxNorm
+
+        * `SNOMED` - SNOMED'
+    WorkflowRequestRequest:
+      type: object
+      properties:
+        query:
+          type: string
+          minLength: 1
+          description: Clinical term to resolve
+        vocabulary_id:
+          type: string
+          minLength: 1
+          description: Vocabulary to resolve against (e.g., 'ICD10CM', 'SNOMED', 'RxNorm')
+        domain_id:
+          type: string
+          minLength: 1
+          description: Filter by domain (e.g., 'Condition')
+        top_k:
+          type: integer
+          maximum: 100
+          minimum: 1
+          nullable: true
+          description: Override per-pass top_k from the strategy (1-100)
+        include_mappings:
+          type: boolean
+          default: false
+          description: Include cross-vocabulary mappings for each match
+        target_vocabularies:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Target vocabularies for mappings (e.g., ['SNOMED', 'ICD10CM'])
+      required:
+      - query
+      - vocabulary_id
+    WorkflowResponse:
+      type: object
+      properties:
+        results:
+          $ref: '#/components/schemas/WorkflowResults'
+        metadata:
+          type: object
+          additionalProperties: {}
+      required:
+      - metadata
+      - results
+    WorkflowResults:
+      type: object
+      properties:
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowStep'
+      required:
+      - steps
+    WorkflowStep:
+      type: object
+      properties:
+        step:
+          type: integer
+        label:
+          type: string
+        concept_class_id:
+          type: string
+          nullable: true
+        matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResolvedConcept'
+        descendants:
+          type: object
+          additionalProperties: {}
+          nullable: true
+      required:
+      - concept_class_id
+      - label
+      - matches
+      - step
   securitySchemes:
     api_key_auth:
       type: apiKey
@@ -1328,5 +3349,9 @@ tags:
 - name: Gateway
   description: PHI-safe LLM access. Text is redacted before any model sees it and re-hydrated in the answer,
     and every response carries a receipt.
+- name: Account
+  description: Your own API usage and cost. Readable with any credential, including a key with no scopes
+    — billing transparency is not a privilege to withhold. A key sees the requests made with that key;
+    a dashboard session sees the requests made in the dashboard.
 servers:
 - url: https://api.v2.healthproximate.com
