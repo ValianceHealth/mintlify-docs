@@ -9,7 +9,7 @@ The gateway serves models from five providers. Every model runs under a signed B
 
 **The assessment is ours to complete, not yours to negotiate.** A model whose destination we have assessed is callable by every customer. One we have not assessed is callable by none, and returns `403` with `code: "model_not_allowed"` until that changes. The **Transfer assessment** column below tells you which is which today.
 
-If you omit `model`, the gateway uses `apac.amazon.nova-pro-v1:0`.
+`model` is required on every request; the gateway has no default. If you have no reason to pick another, use `apac.amazon.nova-pro-v1:0`.
 
 **Read the model ID as a destination, not just a capability.** A prefix names where inference happens: `apac.` is the ten Asia-Pacific AWS regions, `us.` is the United States, `in.` is India, and `jp.` is Japan. A model ID with no such prefix, or with `global.`, is served from a pool that names no single jurisdiction — which is why those cannot carry a completed assessment, whatever their BAA status. A signed BAA covers the *service*; a transfer assessment needs the *country*. Both are required, and they are not the same question.
 
@@ -19,21 +19,23 @@ Every model in this catalog supports [tool calling](/api/tool-calling). Models w
 
 | Model ID | Tier | Processor | Transfer assessment |
 | --- | --- | --- | --- |
-| `apac.amazon.nova-pro-v1:0` | Standard (default) | AWS Bedrock — BAA, HIPAA-aligned | Complete |
+| `apac.amazon.nova-pro-v1:0` | Standard | AWS Bedrock — BAA, HIPAA-aligned | Complete |
 | `apac.amazon.nova-lite-v1:0` | Light | AWS Bedrock — BAA, HIPAA-aligned | Complete |
 | `apac.amazon.nova-micro-v1:0` | Micro | AWS Bedrock — BAA, HIPAA-aligned | Complete |
 
-The default family, and the one with a completed assessment. Pick these unless you have a reason not to.
+Served only from Asia-Pacific regions, with a completed assessment. Pick these unless you have a reason not to.
 
 ## Anthropic
 
 | Model ID | Tier | Processor | Transfer assessment |
 | --- | --- | --- | --- |
+| `us.anthropic.claude-sonnet-5` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Complete — United States |
+| `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast | AWS Bedrock — BAA, HIPAA-aligned | Open |
 | `global.anthropic.claude-opus-5` | Frontier (most capable) | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
 | `global.anthropic.claude-sonnet-5` | Frontier | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
 | `global.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast | AWS Bedrock — BAA, HIPAA-aligned | Open — no single jurisdiction |
 
-Same AWS account and BAA as the Nova family. The BAA is not the open question — the destination is. A `global.` profile routes to whichever region has capacity, so there is no single country to assess, and by the rule above that keeps the assessment Open. An APAC-resident Claude exists on a `jp.` profile and would close it; that route is not served here yet.
+Same AWS account and BAA as the Nova family. The BAA is not the open question — the destination is. **For clinical traffic on Claude, use `us.anthropic.claude-sonnet-5`**: the `us.` profile routes only inside the United States, so it carries a completed assessment. A `global.` profile routes to whichever region has capacity, so there is no single country to assess, and by the rule above those stay Open. The `us.` Haiku route is served but not yet assessed.
 
 ## OpenAI
 
@@ -55,7 +57,7 @@ Same AWS account and BAA as the Nova family. The BAA is not the open question �
 Pick `in.` for the shortest chain — one country, one assessment. Pick `us.` for the widest capacity. The `global.` rows are the same three models served from a worldwide pool: same BAA, same processor, but no single country to assess — so they stay Open, and clinical traffic belongs on a prefixed id.
 
 <Warning>
-  **The GPT-5.6 family retains flagged traffic for up to 30 days.** AWS applies zero data retention to Bedrock by default, but the GPT-5.6 family is an exception: traffic flagged by its abuse classifier is held up to 30 days for automated review, in the region that processed the request. It is not shared with OpenAI. If that does not suit your use case, pick a Nova or `gpt-oss` model — neither carries the exception.
+  **The GPT-5.6 family retains flagged traffic for up to 30 days.** AWS applies zero data retention to Bedrock by default, but the GPT-5.6 family is an exception: traffic flagged by its abuse classifier is held up to 30 days for automated review, in the region that processed the request. It is not shared with OpenAI. If that does not suit your use case, pick a Nova or a DeepSeek V4 model — neither carries the exception.
 </Warning>
 
 Dialect note: the AWS-served GPT-5.6 route speaks Bedrock Converse. The gateway routes by model ID, so **your request format does not change**.
@@ -64,8 +66,11 @@ Dialect note: the AWS-served GPT-5.6 route speaks Bedrock Converse. The gateway 
 
 | Model ID | Tier | Processor | Transfer assessment |
 | --- | --- | --- | --- |
-| `DeepSeek-V4-Flash` | Fast | Azure AI Foundry — Microsoft BAA | Open |
+| `DeepSeek-V4-Pro` | Frontier | Azure AI Foundry — Microsoft BAA | Complete — United States |
+| `DeepSeek-V4-Flash` | Fast | Azure AI Foundry — Microsoft BAA | Complete — United States |
 | `deepseek.v3.2` | Reasoning | AWS Bedrock — BAA, HIPAA-aligned | Open |
+
+The V4 models run on an Azure AI Foundry Data Zone deployment in the United States: Microsoft routes it only inside the US data zone. **Nothing is retained** — abuse monitoring is switched off for our resource, so there is no review store and no human review.
 
 ## MiniMax
 
