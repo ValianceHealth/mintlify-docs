@@ -359,7 +359,7 @@ paths:
         **FHIR R4 spec:** [CodeSystem $lookup](https://hl7.org/fhir/R4/codesystem-operation-lookup.html)
         · [CodeSystem](https://hl7.org/fhir/R4/codesystem.html) · [Parameters](https://hl7.org/fhir/R4/parameters.html)
         · [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html)'
-      summary: CodeSystem $lookup
+      summary: CodeSystem $lookup (query string)
       externalDocs:
         url: https://hl7.org/fhir/R4/codesystem-operation-lookup.html
         description: 'HL7 FHIR R4: CodeSystem $lookup'
@@ -539,7 +539,7 @@ paths:
         **FHIR R4 spec:** [CodeSystem $lookup](https://hl7.org/fhir/R4/codesystem-operation-lookup.html)
         · [CodeSystem](https://hl7.org/fhir/R4/codesystem.html) · [Parameters](https://hl7.org/fhir/R4/parameters.html)
         · [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html)'
-      summary: CodeSystem $lookup
+      summary: CodeSystem $lookup (Parameters body)
       externalDocs:
         url: https://hl7.org/fhir/R4/codesystem-operation-lookup.html
         description: 'HL7 FHIR R4: CodeSystem $lookup'
@@ -708,7 +708,7 @@ paths:
         **FHIR R4 spec:** [CodeSystem $validate-code](https://hl7.org/fhir/R4/codesystem-operation-validate-code.html)
         · [CodeSystem](https://hl7.org/fhir/R4/codesystem.html) · [Parameters](https://hl7.org/fhir/R4/parameters.html)
         · [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html)'
-      summary: CodeSystem $validate-code
+      summary: CodeSystem $validate-code (query string)
       externalDocs:
         url: https://hl7.org/fhir/R4/codesystem-operation-validate-code.html
         description: 'HL7 FHIR R4: CodeSystem $validate-code'
@@ -844,7 +844,7 @@ paths:
         **FHIR R4 spec:** [CodeSystem $validate-code](https://hl7.org/fhir/R4/codesystem-operation-validate-code.html)
         · [CodeSystem](https://hl7.org/fhir/R4/codesystem.html) · [Parameters](https://hl7.org/fhir/R4/parameters.html)
         · [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html)'
-      summary: CodeSystem $validate-code
+      summary: CodeSystem $validate-code (Parameters body)
       externalDocs:
         url: https://hl7.org/fhir/R4/codesystem-operation-validate-code.html
         description: 'HL7 FHIR R4: CodeSystem $validate-code'
@@ -1102,7 +1102,7 @@ paths:
         **FHIR R4 spec:** [ValueSet $expand](https://hl7.org/fhir/R4/valueset-operation-expand.html) ·
         [ValueSet](https://hl7.org/fhir/R4/valueset.html) · [Parameters](https://hl7.org/fhir/R4/parameters.html)
         · [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html)'
-      summary: ValueSet $expand
+      summary: ValueSet $expand (query string)
       externalDocs:
         url: https://hl7.org/fhir/R4/valueset-operation-expand.html
         description: 'HL7 FHIR R4: ValueSet $expand'
@@ -1249,7 +1249,7 @@ paths:
         **FHIR R4 spec:** [ValueSet $expand](https://hl7.org/fhir/R4/valueset-operation-expand.html) ·
         [ValueSet](https://hl7.org/fhir/R4/valueset.html) · [Parameters](https://hl7.org/fhir/R4/parameters.html)
         · [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html)'
-      summary: ValueSet $expand
+      summary: ValueSet $expand (Parameters body)
       externalDocs:
         url: https://hl7.org/fhir/R4/valueset-operation-expand.html
         description: 'HL7 FHIR R4: ValueSet $expand'
