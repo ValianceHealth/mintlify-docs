@@ -131,14 +131,14 @@
               "POST /api/v1/drg/classify/",
               "POST /api/v1/drg/agent/",
               "POST /api/v1/drg/batch/",
-              "GET /api/v1/drg/batch/{job_id}/",
-              "POST /api/v1/fhir/drg/$classify"
+              "GET /api/v1/drg/batch/{job_id}/"
             ]
           },
           {
             "group": "FHIR R4",
             "openapi": "api/openapi-commercial.yaml",
             "pages": [
+              "api/fhir/ehr-integration",
               "GET /api/v1/fhir/metadata",
               "GET /api/v1/fhir/CodeSystem/$lookup",
               "POST /api/v1/fhir/CodeSystem/$lookup",
