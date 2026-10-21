@@ -134,6 +134,21 @@
               "GET /api/v1/drg/batch/{job_id}/",
               "POST /api/v1/fhir/drg/$classify"
             ]
+          },
+          {
+            "group": "FHIR R4",
+            "openapi": "api/openapi-commercial.yaml",
+            "pages": [
+              "GET /api/v1/fhir/metadata",
+              "GET /api/v1/fhir/CodeSystem/$lookup",
+              "POST /api/v1/fhir/CodeSystem/$lookup",
+              "GET /api/v1/fhir/CodeSystem/$validate-code",
+              "POST /api/v1/fhir/CodeSystem/$validate-code",
+              "GET /api/v1/fhir/ValueSet/$expand",
+              "POST /api/v1/fhir/ValueSet/$expand",
+              "POST /api/v1/fhir/ConceptMap/$translate",
+              "POST /api/v1/fhir/$classify-drg"
+            ]
           }
         ]
       }
@@ -182,3 +197,4 @@
     }
   }
 }
+
