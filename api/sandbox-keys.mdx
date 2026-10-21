@@ -1,0 +1,87 @@
+---
+title: "Sandbox keys"
+description: "Test keys for integrating before you pay: what they call, the monthly quota, and how to get a live key."
+---
+
+{/* The source of this page is docs/api/sandbox-keys.mdx in healthproximate.
+    sync-commercial-docs.yml copies it here. Edit it there, not here. */}
+
+A sandbox key lets you build and test an integration before you add credit.
+It is a real key on the real API.
+
+## What a sandbox key does
+
+- It calls **real models**. There are no canned or mock responses.
+- The redactor still runs, exactly as for a live key.
+- It sees the same model list as a live key (`GET /models`, the `phi_approved`
+  set on the [Models](/api/models) page). Sending synthetic data is the
+  control, not a smaller model list.
+- It never spends your credit balance and never appears on an invoice.
+
+**Send synthetic data only.** Never send patient records or anything real
+through a sandbox key.
+
+## Two prefixes
+
+| Key | Starts with |
+| --- | --- |
+| Sandbox | `hpx_test_` |
+| Live | `hpx_live_` |
+
+The prefix tells you which kind a key is in logs, code review and support
+tickets. It is only a label. We decide how a key behaves from how it was issued,
+never from its text. Keys issued before this change keep their original
+`hpx_` prefix and work as before.
+
+## Quota
+
+A sandbox key has a monthly request quota per organization, shared by all of
+its sandbox keys. On the Free plan it is **1,000 requests a month**. Team and
+Enterprise have no sandbox quota.
+
+- Only successful calls count (status below 400). Errors, including the
+  `429` you get at the limit, do not use up quota.
+- The quota resets at the start of each calendar month, UTC.
+- Your billing page shows the count used and the reset time.
+
+You also have a small spend cap behind the quota. It does not reset
+automatically. If a sandbox key is refused with `spend_limit_reached`, contact
+us.
+
+## At the limit
+
+Request number 1,001 in a month returns `429`:
+
+```json
+{
+  "detail": "sandbox_quota_exceeded",
+  "resets_at": "2026-11-01T00:00:00+00:00",
+  "request_id": "..."
+}
+```
+
+`Retry-After` is the number of seconds until `resets_at`, capped at one day
+(86400) so an SDK that retries automatically does not wait a month. Use
+`resets_at` for the real reset time. On `/api/v1/llm/`
+the body is the OpenAI error shape instead, with the message
+`sandbox_quota_exceeded` and `resets_at` inside `error.metadata`.
+
+## Insufficient credit
+
+Sandbox keys never return `402`. A **live** key on a prepaid plan returns `402`
+when the available credit is less than the worst case of the request:
+
+```json
+{
+  "error": {
+    "type": "insufficient_credit",
+    "code": "insufficient_credit",
+    "metadata": {"available_minor": 0, "currency": "MYR", "request_id": "..."}
+  }
+}
+```
+
+## Going live
+
+Top up a Team account to unlock live keys. Create a key in the Keys page: it
+starts with `hpx_live_`. Swap it into your integration. Nothing else changes.
