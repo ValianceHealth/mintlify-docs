@@ -1,0 +1,172 @@
+---
+title: "EHR integration (FHIR R4)"
+description: "Wire Healthproximate auto-coding into an EHR with standard FHIR R4 terminology operations: code search at the point of entry, validation on save, ICD-to-SNOMED mapping, and MS-DRG at discharge."
+---
+
+Healthproximate runs a FHIR R4 (4.0.1) terminology server at `/api/v1/fhir/`. Your EHR, integration engine (Mirth, Rhapsody, Iguana) or any FHIR client library (HAPI, Firely, fhir.resources) can call it with the operations it already knows. No custom SDK is needed.
+
+This page walks through the coding workflow an EHR typically needs, from the moment a clinician starts typing a diagnosis to the DRG at discharge. Every call is a standard HL7 operation; the [API Reference](/api-reference) has the full request and response for each one.
+
+## The workflow at a glance
+
+| Point in the EHR | FHIR operation | What it does |
+|---|---|---|
+| Clinician types a diagnosis or procedure | [`ValueSet/$expand`](https://hl7.org/fhir/R4/valueset-operation-expand.html) | Free-text search, ranked codes for a picker |
+| Code is saved to the chart | [`CodeSystem/$validate-code`](https://hl7.org/fhir/R4/codesystem-operation-validate-code.html) | Rejects unknown or deprecated codes before they reach a claim |
+| A stored code is displayed | [`CodeSystem/$lookup`](https://hl7.org/fhir/R4/codesystem-operation-lookup.html) | Official name, version, synonyms, parent code |
+| Problem list needs SNOMED CT | [`ConceptMap/$translate`](https://hl7.org/fhir/R4/conceptmap-operation-translate.html) | ICD-10-CM to SNOMED CT |
+| Encounter is discharged | `$classify-drg` | Bundle of Conditions and Procedures in, MS-DRG out |
+
+Start by reading the [CapabilityStatement](https://hl7.org/fhir/R4/capabilitystatement.html) at `GET /api/v1/fhir/metadata`. It needs no token, and most FHIR clients read it automatically to learn what the server supports.
+
+## Before you start
+
+**Authentication.** Send `Authorization: Bearer hpx_...` with an API key on every call except `metadata`. `X-API-Key: hpx_...` also works.
+
+**Key scopes.** A key needs the `vocabulary` scope for the terminology operations and `drg:classify` for `$classify-drg`. A key with no scopes can call everything; a scoped key calling outside its scopes gets `403`.
+
+**Code systems.** Identify each code system by its canonical FHIR URI:
+
+| Code system | `system` URI |
+|---|---|
+| ICD-10-CM | `http://hl7.org/fhir/sid/icd-10-cm` |
+| ICD-10 (WHO) | `http://hl7.org/fhir/sid/icd-10` |
+| ICD-10-PCS | `http://www.cms.gov/Medicare/Coding/ICD10` |
+| ICD-9-CM | `http://hl7.org/fhir/sid/icd-9-cm` |
+| SNOMED CT | `http://snomed.info/sct` |
+
+Codes are accepted dotted or undotted (`E11.9` or `E119`). Responses always use the canonical URIs above. ICD-10-PCS also accepts `http://hl7.org/fhir/sid/icd-10-pcs` on input.
+
+**Media type.** Send and accept `application/fhir+json`. Plain `application/json` is also accepted.
+
+<Steps>
+<Step title="Search codes as the clinician types">
+
+Call `$expand` on the code system with the clinician's words as `filter`. The search is semantic (dense and lexical retrieval with re-ranking), so lay and abbreviated terms often find the right code even when the words differ from the official name. Show the ranked results in your code picker and let the clinician choose; the top hit is a suggestion, not a decision.
+
+```bash
+curl -G "https://api.v2.healthproximate.com/api/v1/fhir/ValueSet/\$expand" \
+  -H "Authorization: Bearer hpx_..." \
+  --data-urlencode "url=http://hl7.org/fhir/sid/icd-10-cm" \
+  --data-urlencode "filter=type 2 diabetes" \
+  --data-urlencode "count=10"
+```
+
+The response is a [ValueSet](https://hl7.org/fhir/R4/valueset.html). Each entry in `expansion.contains` is ready to store as a `Coding`:
+
+```json
+{ "system": "http://hl7.org/fhir/sid/icd-10-cm", "version": "ICD10CM FY2027",
+  "code": "E11.9", "display": "Type 2 diabetes mellitus without complications" }
+```
+
+`filter` is required. `count` is 1 to 100 (default 20). Page with `offset`, within the top 100 results.
+
+</Step>
+<Step title="Validate the code when the chart is saved">
+
+Before a code is written to the record, confirm it is real and current. Pass `display` too if your EHR shows a name, so a code paired with the wrong name is caught.
+
+```bash
+curl -G "https://api.v2.healthproximate.com/api/v1/fhir/CodeSystem/\$validate-code" \
+  -H "Authorization: Bearer hpx_..." \
+  --data-urlencode "system=http://hl7.org/fhir/sid/icd-10-cm" \
+  --data-urlencode "code=E11.9"
+```
+
+The answer is a [Parameters](https://hl7.org/fhir/R4/parameters.html) resource with `result` (`true` or `false`) and, when false, a `message` such as `Code is deprecated (valid until 2025-09-30).` An unknown code is a normal `200` with `result: false`, not an error, so you can show the message to the user directly.
+
+</Step>
+<Step title="Look up a code for display">
+
+When the EHR shows a code it stored earlier, `$lookup` returns its official name and version, English synonyms (`designation`) and its parent code (`property` `parent`). The parent code is useful for grouping, e.g. E11.9 under E11.
+
+```bash
+curl -G "https://api.v2.healthproximate.com/api/v1/fhir/CodeSystem/\$lookup" \
+  -H "Authorization: Bearer hpx_..." \
+  --data-urlencode "system=http://hl7.org/fhir/sid/icd-10-cm" \
+  --data-urlencode "code=E11.9"
+```
+
+An unknown code here is a `404` [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html).
+
+</Step>
+<Step title="Map ICD-10-CM to SNOMED CT">
+
+If your problem list or registry needs SNOMED CT, translate the ICD-10-CM code:
+
+```bash
+curl -X POST "https://api.v2.healthproximate.com/api/v1/fhir/ConceptMap/\$translate" \
+  -H "Authorization: Bearer hpx_..." \
+  -H "Content-Type: application/fhir+json" \
+  -d '{"resourceType": "Parameters", "parameter": [
+        {"name": "system",       "valueUri":  "http://hl7.org/fhir/sid/icd-10-cm"},
+        {"name": "code",         "valueCode": "E11.9"},
+        {"name": "targetsystem", "valueUri":  "http://snomed.info/sct"}]}'
+```
+
+Each `match` carries a `concept` (the SNOMED `Coding`) and an `equivalence`:
+
+- `equivalent`: the code's only target.
+- `inexact`: one of several targets. Let the clinician pick.
+- `relatedto`: the answer came from our curated WHO ICD-10 crosswalk.
+
+No mapping is `result: false`. Mappings retired by a vocabulary update are never returned.
+
+<Note>
+Translation goes from a classification (ICD-10-CM, ICD-10, ICD-10-PCS, ICD-9-CM) to SNOMED CT. The reverse, SNOMED CT to ICD-10-CM, is not available yet.
+</Note>
+
+</Step>
+<Step title="Get the MS-DRG at discharge">
+
+At discharge, send the encounter as a FHIR [Bundle](https://hl7.org/fhir/R4/bundle.html):
+
+- a [Patient](https://hl7.org/fhir/R4/patient.html), of which only `gender` is read;
+- the encounter's [Condition](https://hl7.org/fhir/R4/condition.html) resources, coded in ICD-10-CM;
+- any [Procedure](https://hl7.org/fhir/R4/procedure.html) resources, coded in ICD-10-PCS;
+- optionally the [Encounter](https://hl7.org/fhir/R4/encounter.html). Its `diagnosis` with `rank: 1` marks the principal diagnosis, and its `hospitalization.dischargeDisposition` sets the discharge status.
+
+```bash
+curl -X POST "https://api.v2.healthproximate.com/api/v1/fhir/\$classify-drg" \
+  -H "Authorization: Bearer hpx_..." \
+  -H "Content-Type: application/fhir+json" \
+  -d @encounter-bundle.json
+```
+
+The result is a `Parameters` resource with `drg`, `description`, `mdc` and `grouperVersion`. Without a ranked `Encounter.diagnosis`, the first listed Condition is the principal diagnosis.
+
+<Note>
+Patient identifiers are dropped at the boundary: names, identifiers, addresses and telecom are never read and never stored. The response attests this with `fhir_identifiers_dropped: true`. The Bundle is not persisted.
+</Note>
+
+</Step>
+</Steps>
+
+## When you only have free text
+
+The FHIR operations above work with codes and short search terms. To code a whole clinical note or discharge summary, use these JSON endpoints. They are not FHIR operations:
+
+- [`POST /api/v1/omop/code/`](/api-reference) takes `{"text": "...", "vocabulary": "ICD10CM"}` and returns ranked candidate codes for the text. See [Diagnosis coding](/api/coding/diagnosis).
+- [`POST /api/v1/drg/agent/`](/api-reference) takes `{"message": "<clinical text>"}`. An AI agent extracts the ICD-10 codes and assigns the MS-DRG with an explanation.
+
+Their output codes drop straight into the FHIR calls above, for example to validate them before saving.
+
+## Errors
+
+Refusals are FHIR [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html) resources with a matching HTTP status. Show `issue[0].diagnostics` to integration staff; it always names the problem.
+
+| Status | `issue.code` | When |
+|---|---|---|
+| 400 | `required` | A required input (`system`, `code`, `filter`, `targetsystem`) is missing |
+| 400 | `not-supported` | Unknown code system. The message lists the supported URIs |
+| 400 | `not-found` | `version` is not the loaded version. The message names the loaded one |
+| 400 | `invalid` / `structure` | Bad `count`/`offset`, or a POST body that is not a FHIR `Parameters` resource |
+| 404 | `not-found` | `$lookup` on a code that does not exist |
+| 401 / 403 / 429 | — | Missing credentials, a key without the scope, or a rate limit. These use the API's standard error body |
+
+## Good to know
+
+- **Caching:** code meanings change only with vocabulary releases, so cache `$lookup` and `$validate-code` results for the session. Check `version` to know when to refresh.
+- **GET or POST:** `$lookup`, `$validate-code` and `$expand` accept query parameters (GET) or a `Parameters` body (POST), as the FHIR spec allows. `$translate` and `$classify-drg` are POST only.
+- **ICD-11:** support is coming, served through these same operations under `http://id.who.int/icd/release/11/mms`.
+- **Specification:** the operations follow the HL7 FHIR R4 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). Run the [CapabilityStatement](https://hl7.org/fhir/R4/capabilitystatement.html) at `GET /api/v1/fhir/metadata` through your FHIR client to check compatibility.
