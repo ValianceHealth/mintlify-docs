@@ -196,6 +196,378 @@ paths:
           description: Authentication required
         '500':
           description: Internal server error
+  /api/v1/fhir/$autocode:
+    post:
+      operationId: v1_fhir_autocode
+      description: 'Send a FHIR R4 `Bundle` of one case and get back a **provisional** coding
+
+        of it. The notes go in as `DocumentReference` (plain text); the Bundle also takes
+
+        a `Patient` (required; the first one is used), `ChargeItem`, `Condition` and
+
+        `Encounter`. Resource ids are echoed back and are seen by the coding model, so
+
+        use opaque ids (never a name or a medical record number).
+
+
+        The result is a `Bundle` of provisional `Condition` (ICD-10-CM, plus SNOMED CT when
+
+        an equivalent exists) and `Procedure` (ICD-10-PCS) resources, the `ChargeItem`s you
+
+        sent echoed by id (whitelisted fields only; an RxNorm or SNOMED CT coding is added
+
+        when matched), an `Encounter` carrying the diagnosis ranks, and an
+
+        `OperationOutcome` listing queries and items that were withheld (severity
+
+        `warning`, code `incomplete`). Each coding carries `autocode-confidence` and
+
+        `autocode-evidence` extensions. `Bundle.meta.tag` carries the redaction receipt.
+
+        Every `subject` references `Patient/patient`, which is not in the result Bundle:
+
+        map it to your own patient. A withheld item names its code in `diagnostics`.
+
+        CPT and HCPCS are never returned. A coder reviews every result; nothing is final.
+
+
+        **Redaction.** Names and identifiers are redacted before any model sees the text.
+
+        If redaction fails, nothing is processed and the answer is 503.
+
+
+        **Limits.** Body at most 2,000,000 bytes, notes at most 50,000 characters in total,
+
+        at most 500 `ChargeItem` and 600 Bundle entries (400, code `too-long`). An invalid
+
+        Bundle, no notes or no `Patient` is 400, code `invalid`.
+
+
+        **Async.** Add `Prefer: respond-async` and an `Idempotency-Key` (8-119 characters)
+
+        to get `202 Accepted` with `Content-Location: /api/v1/fhir/autocode-jobs/{job id}` and `Retry-After:
+        5`,
+
+        then poll that URL (see the status operation). The same key returns the same job,
+
+        a failed one included: to retry a failed job, submit with a new `Idempotency-Key`.
+
+        See [Asynchronous Request Patterns](https://hl7.org/fhir/R4/async.html).
+
+
+        **Access.** An external, non-superuser API key with both the `autocode` and
+
+        `vocabulary` scopes, on an organization with the `fhir_autocode` flag. Send `Authorization: Bearer
+        <token>`, where the token is a Healthproximate JWT or an `hpx_` API key with the `vocabulary`
+        scope.
+
+
+        **Billing.** One flat per-case price, charged on a 200 only. 4xx, 429, 503 and the
+
+        202 submit are free. A spend-cap refusal is a 429 `OperationOutcome` (code
+
+        `throttled`); a rate or monthly limit is a 429 too, with a plain JSON body. 503 means "retry later":
+        redaction
+
+        failed, the coder gave no structured answer, it timed out, or a model or code table
+
+        was unavailable.
+
+
+        **Scoping.** The acting organization is the API key''s own: a key is bound to
+
+        one organization, so this is a gate on that organization (the `fhir_autocode`
+
+        flag and the `autocode` and `vocabulary` scopes), not a filter. The request reads
+
+        no tenant data and the result is built only from the Bundle you send. A JWT
+
+        caller, a key missing the `vocabulary` scope or an organization without the flag
+
+        gets a 403 `OperationOutcome` (a 403 stays a 403 on `/api/v1/`). A key missing
+
+        the `autocode` scope gets the key layer''s own 403.
+
+
+        **FHIR R4 spec:** [Bundle](https://hl7.org/fhir/R4/bundle.html) · [DocumentReference](https://hl7.org/fhir/R4/documentreference.html)
+        · [ChargeItem](https://hl7.org/fhir/R4/chargeitem.html) · [Condition](https://hl7.org/fhir/R4/condition.html)
+        · [Procedure](https://hl7.org/fhir/R4/procedure.html) · [Encounter](https://hl7.org/fhir/R4/encounter.html)
+        · [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html) · [Asynchronous Request Patterns](https://hl7.org/fhir/R4/async.html)'
+      summary: Code a clinical case from notes and charges ($autocode)
+      externalDocs:
+        url: https://hl7.org/fhir/R4/bundle.html
+        description: 'HL7 FHIR R4: Bundle'
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: 'Required with `Prefer: respond-async`; 8-119 characters.'
+      - in: header
+        name: Prefer
+        schema:
+          type: string
+        description: '`respond-async` to submit a job instead of waiting.'
+      tags:
+      - FHIR Terminology
+      requestBody:
+        content:
+          application/fhir+json:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: Bundle
+                    type: collection
+                    meta:
+                      tag:
+                      - system: https://valiancehealth.ai/fhir/redaction
+                        code: presidio
+                        display: 1 entities redacted
+                    entry:
+                    - fullUrl: urn:uuid:78c3cb91-6949-536d-85e2-a69572991c45
+                      resource:
+                        resourceType: Condition
+                        id: dx-0
+                        clinicalStatus:
+                          coding:
+                          - system: http://terminology.hl7.org/CodeSystem/condition-clinical
+                            code: active
+                        verificationStatus:
+                          coding:
+                          - system: http://terminology.hl7.org/CodeSystem/condition-ver-status
+                            code: provisional
+                        code:
+                          coding:
+                          - system: http://hl7.org/fhir/sid/icd-10-cm
+                            code: K35.32
+                            userSelected: false
+                            extension:
+                            - url: https://valiancehealth.ai/fhir/StructureDefinition/autocode-confidence
+                              valueDecimal: 0.9
+                            - url: https://valiancehealth.ai/fhir/StructureDefinition/autocode-evidence
+                              valueString: perforated appendix
+                        subject:
+                          reference: Patient/patient
+                    - fullUrl: urn:uuid:7103efdf-c659-58af-b780-886409f6da52
+                      resource:
+                        resourceType: Procedure
+                        id: px-0
+                        status: unknown
+                        code:
+                          coding:
+                          - system: http://www.cms.gov/Medicare/Coding/ICD10
+                            code: 0DTJ4ZZ
+                            userSelected: false
+                        subject:
+                          reference: Patient/patient
+                    - fullUrl: urn:uuid:c3ba07fc-b763-591c-872f-c6c3fe40b438
+                      resource:
+                        resourceType: OperationOutcome
+                        id: queries
+                        issue:
+                        - severity: warning
+                          code: incomplete
+                          diagnostics: Was the perforation documented before surgery?
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: Bundle
+                    type: collection
+                    meta:
+                      tag:
+                      - system: https://valiancehealth.ai/fhir/redaction
+                        code: presidio
+                        display: 1 entities redacted
+                    entry:
+                    - fullUrl: urn:uuid:78c3cb91-6949-536d-85e2-a69572991c45
+                      resource:
+                        resourceType: Condition
+                        id: dx-0
+                        clinicalStatus:
+                          coding:
+                          - system: http://terminology.hl7.org/CodeSystem/condition-clinical
+                            code: active
+                        verificationStatus:
+                          coding:
+                          - system: http://terminology.hl7.org/CodeSystem/condition-ver-status
+                            code: provisional
+                        code:
+                          coding:
+                          - system: http://hl7.org/fhir/sid/icd-10-cm
+                            code: K35.32
+                            userSelected: false
+                            extension:
+                            - url: https://valiancehealth.ai/fhir/StructureDefinition/autocode-confidence
+                              valueDecimal: 0.9
+                            - url: https://valiancehealth.ai/fhir/StructureDefinition/autocode-evidence
+                              valueString: perforated appendix
+                        subject:
+                          reference: Patient/patient
+                    - fullUrl: urn:uuid:7103efdf-c659-58af-b780-886409f6da52
+                      resource:
+                        resourceType: Procedure
+                        id: px-0
+                        status: unknown
+                        code:
+                          coding:
+                          - system: http://www.cms.gov/Medicare/Coding/ICD10
+                            code: 0DTJ4ZZ
+                            userSelected: false
+                        subject:
+                          reference: Patient/patient
+                    - fullUrl: urn:uuid:c3ba07fc-b763-591c-872f-c6c3fe40b438
+                      resource:
+                        resourceType: OperationOutcome
+                        id: queries
+                        issue:
+                        - severity: warning
+                          code: incomplete
+                          diagnostics: Was the perforation documented before surgery?
+          description: FHIR R4 resource (application/fhir+json)
+        '400':
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: invalid
+                      diagnostics: the Bundle has no clinical notes
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: invalid
+                      diagnostics: the Bundle has no clinical notes
+          description: 'OperationOutcome: Invalid Bundle, no notes, no Patient, a missing or malformed
+            Idempotency-Key, or a limit exceeded (code `too-long`)'
+        '403':
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: forbidden
+                      diagnostics: $autocode is not enabled for this organization
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: forbidden
+                      diagnostics: $autocode is not enabled for this organization
+          description: 'OperationOutcome: Not an API key, an internal or superuser key, a missing `vocabulary`
+            scope, or `fhir_autocode` is off for the organization'
+        '429':
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: throttled
+                      diagnostics: spend limit reached
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: throttled
+                      diagnostics: spend limit reached
+          description: 'OperationOutcome: The organization''s spend limit is reached (this body, code
+            `throttled`). A rate or monthly limit is also 429, refused before the operation runs, with
+            a plain JSON body instead'
+        '503':
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: transient
+                      diagnostics: auto-coding is temporarily unavailable
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: transient
+                      diagnostics: auto-coding is temporarily unavailable
+          description: 'OperationOutcome: Redaction failed, or the coder is unavailable. Retry later;
+            not billed'
+        '202':
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: 'Accepted (only with `Prefer: respond-async`). Empty body; poll `Content-Location`
+            (`/api/v1/fhir/autocode-jobs/{job id}`) every `Retry-After` seconds.'
+        '401':
+          description: No or invalid credentials
   /api/v1/fhir/$classify-drg:
     post:
       operationId: v1_fhir_classify_drg_create
@@ -1346,6 +1718,304 @@ paths:
           description: No or invalid credentials
         '403':
           description: The API key lacks the scope for this path
+        '429':
+          description: Rate or monthly limit reached
+  /api/v1/fhir/autocode-jobs/{job_id}:
+    get:
+      operationId: v1_fhir_autocode_status
+      description: 'Poll the URL returned in `Content-Location` by an async `$autocode` request.
+
+
+        | Status | Meaning |
+
+        |---|---|
+
+        | 202 | Queued or running. Empty body; retry after `Retry-After` seconds. |
+
+        | 200 | Done: the same result `Bundle` a synchronous call returns. |
+
+        | 503 | The run failed: an `OperationOutcome`. The same `Idempotency-Key` returns this failed
+        job again, so retry with a new one. |
+
+        | 410 | The result expired. Results are kept 7 days, then purged. |
+
+        | 404 | No such job, or it belongs to another organization (indistinguishable on purpose). |
+
+
+        See [Asynchronous Request Patterns](https://hl7.org/fhir/R4/async.html). Send `Authorization:
+        Bearer <token>`, where the token is a Healthproximate JWT or an `hpx_` API key with the `vocabulary`
+        scope.
+
+
+        **Scoping.** A filter on the API key''s own organization: a job id from any other
+
+        organization is a 404, never a 403. A JWT caller gets a 403 `OperationOutcome`
+
+        (returned, and still 403 on `/api/v1/`).
+
+
+        **FHIR R4 spec:** [Asynchronous Request Patterns](https://hl7.org/fhir/R4/async.html) · [Bundle](https://hl7.org/fhir/R4/bundle.html)
+        · [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html)'
+      summary: Poll an $autocode job
+      externalDocs:
+        url: https://hl7.org/fhir/R4/async.html
+        description: 'HL7 FHIR R4: Asynchronous Request Patterns'
+      parameters:
+      - in: path
+        name: job_id
+        schema:
+          type: string
+          format: uuid
+        description: The job id from the `Content-Location` of the 202.
+        required: true
+      tags:
+      - FHIR Terminology
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: Bundle
+                    type: collection
+                    meta:
+                      tag:
+                      - system: https://valiancehealth.ai/fhir/redaction
+                        code: presidio
+                        display: 1 entities redacted
+                    entry:
+                    - fullUrl: urn:uuid:78c3cb91-6949-536d-85e2-a69572991c45
+                      resource:
+                        resourceType: Condition
+                        id: dx-0
+                        clinicalStatus:
+                          coding:
+                          - system: http://terminology.hl7.org/CodeSystem/condition-clinical
+                            code: active
+                        verificationStatus:
+                          coding:
+                          - system: http://terminology.hl7.org/CodeSystem/condition-ver-status
+                            code: provisional
+                        code:
+                          coding:
+                          - system: http://hl7.org/fhir/sid/icd-10-cm
+                            code: K35.32
+                            userSelected: false
+                            extension:
+                            - url: https://valiancehealth.ai/fhir/StructureDefinition/autocode-confidence
+                              valueDecimal: 0.9
+                            - url: https://valiancehealth.ai/fhir/StructureDefinition/autocode-evidence
+                              valueString: perforated appendix
+                        subject:
+                          reference: Patient/patient
+                    - fullUrl: urn:uuid:7103efdf-c659-58af-b780-886409f6da52
+                      resource:
+                        resourceType: Procedure
+                        id: px-0
+                        status: unknown
+                        code:
+                          coding:
+                          - system: http://www.cms.gov/Medicare/Coding/ICD10
+                            code: 0DTJ4ZZ
+                            userSelected: false
+                        subject:
+                          reference: Patient/patient
+                    - fullUrl: urn:uuid:c3ba07fc-b763-591c-872f-c6c3fe40b438
+                      resource:
+                        resourceType: OperationOutcome
+                        id: queries
+                        issue:
+                        - severity: warning
+                          code: incomplete
+                          diagnostics: Was the perforation documented before surgery?
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: Bundle
+                    type: collection
+                    meta:
+                      tag:
+                      - system: https://valiancehealth.ai/fhir/redaction
+                        code: presidio
+                        display: 1 entities redacted
+                    entry:
+                    - fullUrl: urn:uuid:78c3cb91-6949-536d-85e2-a69572991c45
+                      resource:
+                        resourceType: Condition
+                        id: dx-0
+                        clinicalStatus:
+                          coding:
+                          - system: http://terminology.hl7.org/CodeSystem/condition-clinical
+                            code: active
+                        verificationStatus:
+                          coding:
+                          - system: http://terminology.hl7.org/CodeSystem/condition-ver-status
+                            code: provisional
+                        code:
+                          coding:
+                          - system: http://hl7.org/fhir/sid/icd-10-cm
+                            code: K35.32
+                            userSelected: false
+                            extension:
+                            - url: https://valiancehealth.ai/fhir/StructureDefinition/autocode-confidence
+                              valueDecimal: 0.9
+                            - url: https://valiancehealth.ai/fhir/StructureDefinition/autocode-evidence
+                              valueString: perforated appendix
+                        subject:
+                          reference: Patient/patient
+                    - fullUrl: urn:uuid:7103efdf-c659-58af-b780-886409f6da52
+                      resource:
+                        resourceType: Procedure
+                        id: px-0
+                        status: unknown
+                        code:
+                          coding:
+                          - system: http://www.cms.gov/Medicare/Coding/ICD10
+                            code: 0DTJ4ZZ
+                            userSelected: false
+                        subject:
+                          reference: Patient/patient
+                    - fullUrl: urn:uuid:c3ba07fc-b763-591c-872f-c6c3fe40b438
+                      resource:
+                        resourceType: OperationOutcome
+                        id: queries
+                        issue:
+                        - severity: warning
+                          code: incomplete
+                          diagnostics: Was the perforation documented before surgery?
+          description: FHIR R4 resource (application/fhir+json)
+        '403':
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: forbidden
+                      diagnostics: an API key is required for $autocode
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: forbidden
+                      diagnostics: an API key is required for $autocode
+          description: 'OperationOutcome: Not an API key'
+        '404':
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: not-found
+                      diagnostics: no such job
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: not-found
+                      diagnostics: no such job
+          description: 'OperationOutcome: No such job for this organization'
+        '410':
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: not-found
+                      diagnostics: the result has expired
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: not-found
+                      diagnostics: the result has expired
+          description: 'OperationOutcome: The result expired (kept 7 days)'
+        '503':
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: transient
+                      diagnostics: auto-coding is temporarily unavailable
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Example:
+                  value:
+                    resourceType: OperationOutcome
+                    issue:
+                    - severity: error
+                      code: transient
+                      diagnostics: auto-coding is temporarily unavailable
+          description: 'OperationOutcome: The run failed'
+        '202':
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: 'Still running. Empty body; `Retry-After: 5`.'
+        '401':
+          description: No or invalid credentials
         '429':
           description: Rate or monthly limit reached
   /api/v1/fhir/drg/$classify:
