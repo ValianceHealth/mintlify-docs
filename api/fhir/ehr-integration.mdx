@@ -1,6 +1,6 @@
 ---
 title: "EHR integration (FHIR R4)"
-description: "Wire Healthproximate auto-coding into an EHR with standard FHIR R4 terminology operations: code search at the point of entry, validation on save, ICD-to-SNOMED mapping, and MS-DRG at discharge."
+description: "Wire Healthproximate auto-coding into an EHR with standard FHIR R4 operations: code search at the point of entry, validation on save, ICD-to-SNOMED mapping, whole-case auto-coding, and MS-DRG at discharge."
 ---
 
 Healthproximate runs a FHIR R4 (4.0.1) terminology server at `/api/v1/fhir/`. Your EHR, integration engine (Mirth, Rhapsody, Iguana) or any FHIR client library (HAPI, Firely, fhir.resources) can call it with the operations it already knows. No custom SDK is needed.
@@ -15,6 +15,7 @@ This page walks through the coding workflow an EHR typically needs, from the mom
 | Code is saved to the chart | [`CodeSystem/$validate-code`](https://hl7.org/fhir/R4/codesystem-operation-validate-code.html) | Rejects unknown or deprecated codes before they reach a claim |
 | A stored code is displayed | [`CodeSystem/$lookup`](https://hl7.org/fhir/R4/codesystem-operation-lookup.html) | Official name, version, synonyms, parent code |
 | Problem list needs SNOMED CT | [`ConceptMap/$translate`](https://hl7.org/fhir/R4/conceptmap-operation-translate.html) | ICD-10-CM to SNOMED CT |
+| Notes and charges need coding | `$autocode` | Bundle of notes and charge lines in, provisional codes out for a coder to confirm |
 | Encounter is discharged | `$classify-drg` | Bundle of Conditions and Procedures in, MS-DRG out |
 
 Start by reading the [CapabilityStatement](https://hl7.org/fhir/R4/capabilitystatement.html) at `GET /api/v1/fhir/metadata`. It needs no token, and most FHIR clients read it automatically to learn what the server supports.
@@ -23,7 +24,7 @@ Start by reading the [CapabilityStatement](https://hl7.org/fhir/R4/capabilitysta
 
 **Authentication.** Send `Authorization: Bearer hpx_...` with an API key on every call except `metadata`. `X-API-Key: hpx_...` also works.
 
-**Key scopes.** A key needs the `vocabulary` scope for the terminology operations and `drg:classify` for `$classify-drg`. A key with no scopes can call everything; a scoped key calling outside its scopes gets `403`.
+**Key scopes.** A key needs the `vocabulary` scope for the terminology operations, `drg:classify` for `$classify-drg`, and both `autocode` and `vocabulary` for `$autocode`. A key with no scopes can call everything; a scoped key calling outside its scopes gets `403`.
 
 **Code systems.** Identify each code system by its canonical FHIR URI:
 
@@ -142,9 +143,58 @@ Patient identifiers are dropped at the boundary: names, identifiers, addresses a
 </Step>
 </Steps>
 
+## Auto-code a case from its notes and charges
+
+`POST /api/v1/fhir/$autocode` reads a whole case, its clinical notes and charge lines, and returns a **provisional** coding: diagnoses, procedures and supply codes, each with the evidence it was based on. A coder confirms every result before it is used. `$autocode` is enabled per organization; [contact us](/support) to turn it on.
+
+**Request.** A [Bundle](https://hl7.org/fhir/R4/bundle.html) with `type: collection` holding:
+
+- a [Patient](https://hl7.org/fhir/R4/patient.html) (the first one is used; only `gender` and an age band from `birthDate` are read);
+- at least one [DocumentReference](https://hl7.org/fhir/R4/documentreference.html) with the note as plain text, base64 in `content.attachment.data`;
+- optionally [ChargeItem](https://hl7.org/fhir/R4/chargeitem.html) lines (supplies, drugs, services), recorded [Condition](https://hl7.org/fhir/R4/condition.html) resources (used as evidence only) and the [Encounter](https://hl7.org/fhir/R4/encounter.html).
+
+```bash
+curl -X POST "https://api.v2.healthproximate.com/api/v1/fhir/\$autocode" \
+  -H "Authorization: Bearer hpx_..." \
+  -H "Content-Type: application/fhir+json" \
+  -d @case-bundle.json
+```
+
+**Result.** A Bundle you can review and import:
+
+| Resource | Holds |
+|---|---|
+| `Condition` | A suggested diagnosis in ICD-10-CM, plus SNOMED CT when the mapping is `equivalent`. `verificationStatus` is `provisional` |
+| `Procedure` | A suggested procedure in ICD-10-PCS |
+| `ChargeItem` | Each charge line you sent, echoed by `id`, with an RxNorm (drugs) or SNOMED CT (devices) coding added when one matched |
+| `Encounter` | The diagnoses ranked; `rank: 1` is the principal diagnosis |
+| `OperationOutcome` | Documentation queries, and every code that was held back with the code and the reason (`severity: warning`, `code: incomplete`) |
+
+Every suggested coding has `userSelected: false` and two extensions: `autocode-confidence` (0 to 1) and `autocode-evidence` (the quote from your note that supports it). `Bundle.meta.tag` records how many identifiers were redacted before any model saw the text. Each resource's `subject` is `Patient/patient`, which is not included in the result: map it to your own patient. CPT and HCPCS are never returned.
+
+<Note>
+Free text is redacted before it reaches the coding model and is never logged. Resource ids are echoed back and seen by the model, so use opaque ids, never a name or a medical record number.
+</Note>
+
+**Limits.** A request body up to 2,000,000 bytes, notes up to 50,000 characters in total, up to 500 `ChargeItem`s and 600 Bundle entries. Over a limit is a `400` with `code: too-long`. A case usually takes 20 to 60 seconds.
+
+**Async.** For long-running integrations, follow the [FHIR asynchronous pattern](https://hl7.org/fhir/R4/async.html). Send `Prefer: respond-async` and an `Idempotency-Key` (8 to 119 characters). The answer is `202` with `Content-Location: /api/v1/fhir/autocode-jobs/{id}` and `Retry-After: 5`. Poll that URL:
+
+| Status | Meaning |
+|---|---|
+| `202` | Still running. Wait `Retry-After` seconds |
+| `200` | Done: the result Bundle |
+| `503` | The run failed. Retry with a **new** `Idempotency-Key` (the same key returns the same job) |
+| `410` | The result expired; results are kept for 7 days |
+| `404` | Unknown job, or a job from another organization |
+
+**Errors specific to `$autocode`.** `403` when the caller is not an API key, the key lacks `autocode` or `vocabulary`, or `$autocode` is not enabled for your organization. `429` for the rate limit, the monthly quota or your spending limit. `503` (`transient`) when redaction or the coding model is unavailable; it is safe to retry.
+
+**Billing.** One flat price per coded case, charged on a `200` only. A `4xx` or `503` is not charged.
+
 ## When you only have free text
 
-The FHIR operations above work with codes and short search terms. To code a whole clinical note or discharge summary, use these JSON endpoints. They are not FHIR operations:
+The FHIR operations above work with codes, short search terms, or a whole case (`$autocode`). For a single note without a FHIR Bundle, use these JSON endpoints. They are not FHIR operations:
 
 - [`POST /api/v1/omop/code/`](/api-reference) takes `{"text": "...", "vocabulary": "ICD10CM"}` and returns ranked candidate codes for the text. See [Diagnosis coding](/api/coding/diagnosis).
 - [`POST /api/v1/drg/agent/`](/api-reference) takes `{"message": "<clinical text>"}`. An AI agent extracts the ICD-10 codes and assigns the MS-DRG with an explanation.
@@ -167,6 +217,6 @@ Refusals are FHIR [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.ht
 ## Good to know
 
 - **Caching:** code meanings change only with vocabulary releases, so cache `$lookup` and `$validate-code` results for the session. Check `version` to know when to refresh.
-- **GET or POST:** `$lookup`, `$validate-code` and `$expand` accept query parameters (GET) or a `Parameters` body (POST), as the FHIR spec allows. `$translate` and `$classify-drg` are POST only.
+- **GET or POST:** `$lookup`, `$validate-code` and `$expand` accept query parameters (GET) or a `Parameters` body (POST), as the FHIR spec allows. `$translate`, `$classify-drg` and `$autocode` are POST only.
 - **ICD-11:** support is coming, served through these same operations under `http://id.who.int/icd/release/11/mms`.
 - **Specification:** the operations follow the HL7 FHIR R4 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). Run the [CapabilityStatement](https://hl7.org/fhir/R4/capabilitystatement.html) at `GET /api/v1/fhir/metadata` through your FHIR client to check compatibility.
