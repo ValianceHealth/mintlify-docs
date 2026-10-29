@@ -57,8 +57,12 @@ paths:
           description: Invalid request
         '401':
           description: Authentication required
+        '403':
+          description: '`view_as` names an organization the caller may not act as'
         '500':
           description: Internal server error
+        '503':
+          description: 'De-identification failed — request refused before any model (`code`: `deidentification_failed_closed`)'
   /api/v1/drg/batch/:
     post:
       operationId: v1_drg_batch_create
@@ -66,12 +70,14 @@ paths:
         \ a job id immediately — poll `GET /api/v1/drg/batch/{job_id}/` for\nstatus and progressive per-case\
         \ results.\n\n**Idempotency-Key header is required.** Retrying a submission with the same\nkey\
         \ returns the same job (HTTP 200 instead of 201) and never re-processes or\nre-bills — safe to\
-        \ retry on any network failure.\n\nEach case: `case_ref` (your identifier, unique within the batch),\
-        \ `dx_codes`\n(ICD-10-CM, primary first), optional `pr_codes` (ICD-10-PCS), `gender`,\n`is_alive`.\
-        \ `source_dialect` currently accepts `icd10cm` only — WHO ICD-10 /\nICD-11 batches are refused\
-        \ up front rather than mis-grouped.\n\nBilling: one ledger row per case (`service_type=\"drg_batch\"\
-        `), written exactly\nonce even across worker retries. A spend-capped organization's submission\
-        \ is\nrefused at enqueue with a 429 and costs nothing.\n    "
+        \ retry on any network failure. A key is per client: the same\nAPI key, or the same login. A key\
+        \ another client of your organization already\nused answers 409 `idempotency_key_in_use` and returns\
+        \ nothing of theirs.\n\nEach case: `case_ref` (your identifier, unique within the batch), `dx_codes`\n\
+        (ICD-10-CM, primary first), optional `pr_codes` (ICD-10-PCS), `gender`,\n`is_alive`. `source_dialect`\
+        \ currently accepts `icd10cm` only — WHO ICD-10 /\nICD-11 batches are refused up front rather\
+        \ than mis-grouped.\n\nBilling: one ledger row per case (`service_type=\"drg_batch\"`), written\
+        \ exactly\nonce even across worker retries. A spend-capped organization's submission is\nrefused\
+        \ at enqueue with a 429 and costs nothing.\n    "
       summary: Submit a batch of coded cases for DRG classification
       parameters:
       - in: header
@@ -102,10 +108,15 @@ paths:
           description: Job created
         '200':
           description: Idempotent replay — existing job returned
+        '409':
+          description: '`idempotency_key_in_use`: another client of the organization already used this
+            Idempotency-Key'
         '400':
           description: Invalid request, unsupported dialect, or missing Idempotency-Key
         '401':
           description: Authentication required
+        '403':
+          description: '`view_as` names an organization the caller may not act as'
         '429':
           description: Batch rate limit, monthly limit, or spend cap reached
   /api/v1/drg/batch/{job_id}/:
@@ -135,6 +146,8 @@ paths:
           description: Job status
         '401':
           description: Authentication required
+        '403':
+          description: '`view_as` names an organization the caller may not act as'
         '404':
           description: No such job in your organization
   /api/v1/drg/classify/:
@@ -194,6 +207,8 @@ paths:
           description: Invalid request
         '401':
           description: Authentication required
+        '403':
+          description: '`view_as` names an organization the caller may not act as'
         '500':
           description: Internal server error
   /api/v1/fhir/$autocode:
@@ -233,7 +248,11 @@ paths:
 
         **Redaction.** Names and identifiers are redacted before any model sees the text.
 
-        If redaction fails, nothing is processed and the answer is 503.
+        If redaction fails, nothing is processed and the answer is 503, its issue''s
+
+        `details.coding[0].code` `redaction_failed_closed`: a code of ours, with no `system`
+
+        (`Coding.system` is optional in FHIR R4).
 
 
         **Limits.** Body at most 2,000,000 bytes, notes at most 50,000 characters in total,
@@ -495,8 +514,9 @@ paths:
                     - severity: error
                       code: forbidden
                       diagnostics: $autocode is not enabled for this organization
-          description: 'OperationOutcome: Not an API key, an internal or superuser key, a missing `vocabulary`
-            scope, or `fhir_autocode` is off for the organization'
+          description: 'OperationOutcome: `view_as` names an organization the caller may not act as (checked
+            first), not an API key, an internal or superuser key, a missing `vocabulary` scope, or `fhir_autocode`
+            is off for the organization'
         '429':
           content:
             application/fhir+json:
@@ -696,7 +716,8 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: The API key lacks the drg:classify scope
+          description: The API key lacks the drg:classify scope, or `view_as` names an organization the
+            caller may not act as
         '429':
           description: Rate or monthly limit reached
   /api/v1/fhir/CodeSystem/$lookup:
@@ -1751,7 +1772,9 @@ paths:
 
         organization is a 404, never a 403. A JWT caller gets a 403 `OperationOutcome`
 
-        (returned, and still 403 on `/api/v1/`).
+        (returned, and still 403 on `/api/v1/`). A `view_as` naming an organization the caller
+
+        may not act as is checked first, for a key or a login, and is a 403 too.
 
 
         **FHIR R4 spec:** [Asynchronous Request Patterns](https://hl7.org/fhir/R4/async.html) · [Bundle](https://hl7.org/fhir/R4/bundle.html)
@@ -1921,7 +1944,8 @@ paths:
                     - severity: error
                       code: forbidden
                       diagnostics: an API key is required for $autocode
-          description: 'OperationOutcome: Not an API key'
+          description: 'OperationOutcome: `view_as` names an organization the caller may not act as (checked
+            first), or not an API key'
         '404':
           content:
             application/fhir+json:
@@ -2146,7 +2170,8 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: The API key lacks the drg:classify scope
+          description: The API key lacks the drg:classify scope, or `view_as` names an organization the
+            caller may not act as
         '429':
           description: Rate or monthly limit reached
   /api/v1/fhir/metadata:
@@ -2238,10 +2263,19 @@ paths:
             retry. Deliberately NOT 401 (the key is valid) and NOT 429 (nothing is rate limited): an SDK
             that retries a 429 would only hammer a wallet that needs money. `available_minor` is in the
             wallet''s own minor units.'
+        '403':
+          description: '`permission_error`: a user login (`api_key_required`), or a `view_as` naming an
+            organization the key may not act as (`permission_denied`)'
         '429':
           description: Rate limit or spend limit reached
         '503':
-          description: Redaction failed — request refused
+          description: 'Service unavailable. `error.code` (else `error.type`) names the cause. Retry with
+            backoff after `redaction_failed_closed` (the redactor failed and the request was refused before
+            it reached any model; fail-closed by design), `upstream_throttled` (the model provider is
+            throttling: Azure AI Foundry''s quota, or Amazon Bedrock Converse''s throttling after its
+            retries, and no failover answered) and `upstream_error` (the provider failed with a server
+            error after its retries). `provider_unconfigured` is not one to retry: the model''s provider
+            is not configured on this deployment, or its credential could not be read. Contact support.'
         '504':
           description: The model did not answer inside the budget for a non-streamed request. Retry, or
             send stream=true with redact_only=true.
@@ -2809,8 +2843,8 @@ paths:
         \ local phone\nformats) alongside names, emails, and card/account numbers. Clinical content is\n\
         deliberately preserved: ages, dates like \"day 3 post-op\", vitals, and dosage\nabbreviations\
         \ are NOT redacted, because stripping them destroys the meaning a\ndownstream model needs.\n\n\
-        **Fail-closed:** if redaction cannot complete, this endpoint returns 503 with a\n`failed_closed`\
-        \ receipt and no text — it never returns your input unredacted.\n    "
+        **Fail-closed:** if redaction cannot complete, this endpoint returns 503 with\n`code` `redaction_failed_closed`,\
+        \ a `failed_closed` receipt and no text — it never\nreturns your input unredacted.\n    "
       summary: Redact PHI/PII from free text
       tags:
       - Gateway
@@ -2866,10 +2900,12 @@ paths:
           description: Invalid request
         '401':
           description: Authentication required
+        '403':
+          description: '`view_as` names an organization the caller may not act as'
         '429':
           description: Rate limit exceeded
         '503':
-          description: Redaction failed — request refused
+          description: 'Redaction failed — request refused (`code`: `redaction_failed_closed`)'
   /api/v1/search/:
     post:
       operationId: v1_search_create
