@@ -2917,12 +2917,12 @@ paths:
 
 
         Supported vocabularies: ICD10, ICD10CM, ICD10PCS, ICD9CM, ICD9Proc, SNOMED, CPT4, HCPCS, RxNorm,
-        RxNorm Extension, OPCS4, DRG, LOINC, ICDO3, ATC.
+        RxNorm Extension, OPCS4, DRG, LOINC, ICDO3, ATC, MediAsas DRG.
 
 
         A search with no `vocabularies` filter scans ICD10, ICD10CM, ICD10PCS, ICD9CM, ICD9Proc, SNOMED,
-        CPT4, HCPCS, RxNorm, RxNorm Extension. ATC, DRG, ICDO3, LOINC, OPCS4 are supported but must be
-        requested by name.
+        CPT4, HCPCS, RxNorm, RxNorm Extension. ATC, DRG, ICDO3, LOINC, MediAsas DRG, OPCS4 are supported
+        but must be requested by name.
 
 
         Supported domains: Condition, Procedure, Drug, Measurement, Observation, Device, Specimen.'
@@ -5047,6 +5047,7 @@ components:
       - LOINC
       - ICDO3
       - ATC
+      - MediAsas DRG
       type: string
       description: '* `ICD10` - ICD10
 
@@ -5076,7 +5077,9 @@ components:
 
         * `ICDO3` - ICDO3
 
-        * `ATC` - ATC'
+        * `ATC` - ATC
+
+        * `MediAsas DRG` - MediAsas DRG'
     SupportedDomainsResponse:
       type: object
       properties:
@@ -5117,6 +5120,7 @@ components:
       - LOINC
       - ICDO3
       - ATC
+      - MediAsas DRG
       type: string
       description: '* `ICD10` - ICD10
 
@@ -5146,7 +5150,9 @@ components:
 
         * `ICDO3` - ICDO3
 
-        * `ATC` - ATC'
+        * `ATC` - ATC
+
+        * `MediAsas DRG` - MediAsas DRG'
     TranslateConcept:
       type: object
       properties:
@@ -5222,7 +5228,9 @@ components:
 
             * `ICDO3` - ICDO3
 
-            * `ATC` - ATC'
+            * `ATC` - ATC
+
+            * `MediAsas DRG` - MediAsas DRG'
         target_vocabulary:
           allOf:
           - $ref: '#/components/schemas/TargetVocabularyEnum'
@@ -5259,7 +5267,9 @@ components:
 
             * `ICDO3` - ICDO3
 
-            * `ATC` - ATC'
+            * `ATC` - ATC
+
+            * `MediAsas DRG` - MediAsas DRG'
       required:
       - concept_code
       - source_vocabulary
