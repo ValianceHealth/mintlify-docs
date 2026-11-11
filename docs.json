@@ -135,6 +135,13 @@
             ]
           },
           {
+            "group": "Pricing",
+            "openapi": "api/openapi-commercial.yaml",
+            "pages": [
+              "POST /api/v1/predict/price/"
+            ]
+          },
+          {
             "group": "FHIR R4",
             "openapi": "api/openapi-commercial.yaml",
             "pages": [
