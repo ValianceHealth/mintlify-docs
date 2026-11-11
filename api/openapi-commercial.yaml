@@ -2786,6 +2786,13 @@ paths:
         crosswalk is consulted and `source.found_via` reports that.
 
 
+        ICD-9-CM and ICD-10-CM/PCS have no `Maps to` between them. For those pairs (ICD10PCS ⇄ ICD9Proc,
+        ICD10CM ⇄ ICD9CM) the answer comes from CMS''s 2018 General Equivalence Mappings: `metadata.mapped_via`
+        is `cms_gem_2018`, every GEM target is returned (one code can map to several, and they need not
+        be standard concepts), and each result''s `gem_flags` says whether the match is exact, approximate
+        or part of a combination.
+
+
         **Supports both JWT (Authorization: Bearer) and API key (X-API-Key) authentication.**'
       summary: Translate a concept between vocabularies (API)
       parameters:
@@ -2831,6 +2838,187 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+  /api/v1/predict/price/:
+    post:
+      operationId: v1_predict_price_create
+      description: "\nThe expected price of a diagnosis (by ICD-10 code) or a procedure (by id), from\
+        \ your\norganization's own claims, with a range and the number of cases behind it.\n\n**Whose\
+        \ data.** A key answers for its own organization only. A `view_as` naming another\norganization\
+        \ is refused with 403. Nothing from any other organization is used: where\nyour own history is\
+        \ too thin the answer is `insufficient_data`.\n\n**One organization.** `view_as` naming more than\
+        \ one organization is refused with 400\n`single_organization_required`.\n\n**Minimum cell.** A\
+        \ figure is returned only when at least 20 of your cases from at least\n5 different providers\
+        \ stand behind it, with no single provider more than 25% of the\ncases. Below that the body is\
+        \ `insufficient_data` with a null `point`, `interval`,\n`case_count`, `basis` and `breakdown`;\
+        \ a count below the threshold is never returned, so\n0 cases and 19 cases look the same. `case_count`\
+        \ is your organization's own usable\ncases for the code in the window, rounded down to the nearest\
+        \ 10; it is not the number of\ncases a model was trained on. A model answer that found no similar\
+        \ cases is\n`insufficient_data` too. `basis.window_months` is the rolling admission window the\
+        \ cases are drawn\nfrom. Figures from a model trained on a group of organizations are `insufficient_data`.\n\
+        \n**Payor-bound keys.** A key can be bound to one payor by your account manager. Its model\nanswers\
+        \ are then fed that payor (`payor_applied: true`), and a different `payor_id` in\nthe request\
+        \ is refused with 403. Own-history figures (`basis.result_kind` is\n`own_history_range`) are your\
+        \ organization's claims across all payors, so `payor_applied`\nis `false` for them. Any other\
+        \ key is pooled and must not send `payor_id` (400).\n\n**Concept.** For `domain=condition` send\
+        \ either `code` (an ICD-10 code; only its\n3-character category is used, and that category is\
+        \ the same in ICD-10 and ICD-10-CM) or\n`concept_id`. The answer uses the vocabulary your organization's\
+        \ claims are coded in;\n`concept.vocabulary` in the response says which, and `vocabulary` in the\
+        \ request is\noptional and does not change it. For `domain=procedure` send `concept_id` (the procedure\n\
+        id): procedure codes are not looked up.\n\n**Access.** Every API key needs the `predict:price`\
+        \ scope (a key with no scopes is\nrefused), and the organization must have the\nprice prediction\
+        \ API enabled (403 `feature_not_enabled` otherwise).\n    "
+      summary: Expected price for a diagnosis or procedure
+      tags:
+      - Pricing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricePredictRequestRequest'
+            examples:
+              DiagnosisByCode:
+                value:
+                  domain: condition
+                  code: K35.80
+                  age: 34
+                  gender: F
+                  los: 3
+                summary: Diagnosis by code
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PricePredictRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PricePredictRequestRequest'
+        required: true
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricePredictResponse'
+              examples:
+                Estimate:
+                  value:
+                    result: estimate
+                    metric: price
+                    currency: MYR
+                    payor_applied: false
+                    concept:
+                      domain: condition
+                      concept_id: 4213
+                      code: K35
+                      vocabulary: ICD10CM
+                    point: 8450.0
+                    interval:
+                      low: 6100.0
+                      high: 12900.0
+                      coverage: 0.9
+                    case_count: 210
+                    basis:
+                      result_kind: model
+                      method: trained_model
+                      tier: info
+                      reasons: []
+                      label: null
+                      window_months: 24
+                    breakdown:
+                    - group: Room & board
+                      amount: 2900.0
+                    - group: Others
+                      amount: 410.0
+                InsufficientData:
+                  value:
+                    result: insufficient_data
+                    metric: price
+                    currency: MYR
+                    payor_applied: false
+                    concept:
+                      domain: condition
+                      concept_id: 4213
+                      code: K35
+                      vocabulary: ICD10CM
+                    point: null
+                    interval: null
+                    case_count: null
+                    basis: null
+                    breakdown: null
+                  summary: Insufficient data
+          description: An estimate, or `insufficient_data` when the minimum cell is not met.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                InvalidCode:
+                  value:
+                    detail: Not a valid ICD-10 code.
+                    code: invalid_code
+                  summary: Invalid code
+          description: Invalid request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                Unauthenticated:
+                  value:
+                    detail: Authentication credentials were not provided.
+                    code: not_authenticated
+          description: Authentication required
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                NotEnabled:
+                  value:
+                    detail: Price prediction is not enabled for this organization.
+                    code: feature_not_enabled
+                  summary: Not enabled
+          description: The key lacks the scope, the feature is not enabled, `view_as` names another organization,
+            or `payor_id` is not the key's payor
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                UnknownCode:
+                  value:
+                    detail: No diagnosis category matches this code.
+                    code: concept_not_found
+                  summary: Unknown code
+          description: No diagnosis category or procedure matches
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                InconsistentInputs:
+                  value:
+                    detail: One or more inputs are clinically inconsistent.
+                    code: clinically_invalid_input
+                  summary: Inconsistent inputs
+          description: The inputs are clinically inconsistent or outside what the model accepts
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                Throttled:
+                  value:
+                    detail: Request was throttled. Expected available in 30 seconds.
+                    code: throttled
+          description: Rate limit or monthly request limit reached
   /api/v1/redact/:
     post:
       operationId: v1_redact_create
@@ -4598,6 +4786,193 @@ components:
       - concept_name
       - depth
       - vocabulary_id
+    PriceBasis:
+      type: object
+      properties:
+        result_kind:
+          $ref: '#/components/schemas/ResultKindEnum'
+        method:
+          type: string
+          nullable: true
+        tier:
+          type: string
+          nullable: true
+        reasons:
+          type: array
+          items:
+            type: string
+        label:
+          type: string
+          nullable: true
+        window_months:
+          type: integer
+          description: The rolling admission window, in months, the cases behind the figure are drawn
+            from.
+      required:
+      - label
+      - method
+      - reasons
+      - result_kind
+      - tier
+      - window_months
+    PriceBreakdownItem:
+      type: object
+      properties:
+        group:
+          type: string
+        amount:
+          type: number
+          format: double
+      required:
+      - amount
+      - group
+    PriceConcept:
+      type: object
+      properties:
+        domain:
+          type: string
+        concept_id: {}
+        code:
+          type: string
+          nullable: true
+        vocabulary:
+          type: string
+          nullable: true
+      required:
+      - code
+      - concept_id
+      - domain
+      - vocabulary
+    PriceError:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+      required:
+      - code
+      - detail
+    PriceInterval:
+      type: object
+      properties:
+        low:
+          type: number
+          format: double
+        high:
+          type: number
+          format: double
+        coverage:
+          type: number
+          format: double
+          description: The share of outcomes the range is built to contain.
+      required:
+      - coverage
+      - high
+      - low
+    PricePredictRequestMetricEnum:
+      enum:
+      - price
+      type: string
+      description: '* `price` - price'
+    PricePredictRequestRequest:
+      type: object
+      properties:
+        metric:
+          allOf:
+          - $ref: '#/components/schemas/PricePredictRequestMetricEnum'
+          default: price
+        domain:
+          type: string
+          minLength: 1
+          description: '`condition` (a diagnosis) or `procedure` (a procedure, by `concept_id` only).'
+        code:
+          type: string
+          minLength: 1
+          description: An ICD-10 code (`K35.80`, `K3580` or `K35`); only its 3-character category is used.
+          maxLength: 16
+        vocabulary:
+          type: string
+          minLength: 1
+          description: Optional, and it does not change the answer. The 3-character category is the same
+            in ICD-10 and ICD-10-CM; the answer uses the vocabulary your organization's claims are coded
+            in, and `concept.vocabulary` in the response says which.
+        concept_id:
+          type: string
+          minLength: 1
+          description: 'The concept id instead of `code`: the OMOP concept id of a diagnosis category,
+            or a procedure id.'
+          maxLength: 64
+        age:
+          type: integer
+          maximum: 120
+          minimum: 0
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        los:
+          type: number
+          format: double
+          maximum: 365
+          minimum: 0
+          description: Length of stay in days.
+        is_surgical:
+          type: boolean
+        payor_id:
+          type: string
+          format: uuid
+          description: 'Only a payor-bound key may send it, and only its own payor. Any other caller:
+            400.'
+      required:
+      - domain
+    PricePredictResponse:
+      type: object
+      properties:
+        result:
+          $ref: '#/components/schemas/ResultEnum'
+        metric:
+          type: string
+        currency:
+          type: string
+        payor_applied:
+          type: boolean
+          description: True only when a payor-bound key's payor was fed to the model. Own-history figures
+            are your organization's claims across all payors, so it is false for them and for unbound
+            keys.
+        concept:
+          $ref: '#/components/schemas/PriceConcept'
+        point:
+          type: number
+          format: double
+          nullable: true
+        interval:
+          allOf:
+          - $ref: '#/components/schemas/PriceInterval'
+          nullable: true
+        case_count:
+          type: integer
+          nullable: true
+          description: Your organization's own usable cases for the code in the window, rounded down to
+            the nearest 10 (not the cases a model was trained on). Always at least 20 when present.
+        basis:
+          allOf:
+          - $ref: '#/components/schemas/PriceBasis'
+          nullable: true
+        breakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceBreakdownItem'
+          nullable: true
+      required:
+      - basis
+      - breakdown
+      - case_count
+      - concept
+      - currency
+      - interval
+      - metric
+      - payor_applied
+      - point
+      - result
     RedactRequestRequest:
       type: object
       properties:
@@ -4789,6 +5164,22 @@ components:
       - concept_name
       - score
       - vocabulary_id
+    ResultEnum:
+      enum:
+      - estimate
+      - insufficient_data
+      type: string
+      description: '* `estimate` - estimate
+
+        * `insufficient_data` - insufficient_data'
+    ResultKindEnum:
+      enum:
+      - model
+      - own_history_range
+      type: string
+      description: '* `model` - model
+
+        * `own_history_range` - own_history_range'
     ScoreSourceEnum:
       enum:
       - cross_encoder
@@ -5170,6 +5561,10 @@ components:
         standard_concept:
           type: string
           nullable: true
+        gem_flags:
+          type: string
+          description: 'Only when `metadata.mapped_via` is ''cms_gem_2018'': the GEM''s five-digit flags
+            and what they mean, e.g. ''GEM 2018 flags 10000: approximate''.'
       required:
       - concept_class_id
       - concept_code
@@ -5607,6 +6002,9 @@ components:
 tags:
 - name: DRG
   description: MS-DRG classification from coded input, free clinical text, or FHIR.
+- name: Pricing
+  description: Expected price for a diagnosis or procedure from your organization's own claims, with a
+    minimum-cell rule.
 - name: FHIR Terminology
   description: FHIR R4 CodeSystem, ValueSet and ConceptMap operations over the OMOP vocabularies.
 - name: Vocabulary
