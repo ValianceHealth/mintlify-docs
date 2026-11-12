@@ -55,7 +55,7 @@ client.chat.completions.create(model="<model>", messages=[...])
 ## Scopes
 
 A key may be issued with scopes that narrow which endpoints it can reach:
-`drg:classify`, `llm:chat`, `redact`, `search`.
+`drg:classify`, `llm:chat`, `predict:price`, `redact`, `search`.
 
 An out-of-scope call returns **403**, and the body names the scopes your key
 holds. That is a request for access, not a reason to rotate the key.

@@ -1,0 +1,139 @@
+---
+title: "Price predictions in your app"
+description: "Show the expected price of a diagnosis or procedure, with its range and billing-group breakdown, in your own application."
+---
+
+The pricing endpoints give your application the figures the Healthproximate
+Predictions workflow shows: the expected price of a diagnosis or procedure, a range,
+the number of cases behind it, and the breakdown per billing group. Every figure comes
+from your own organization's claims.
+
+## Before you start
+
+- An API key with the `predict:price` scope. See [Authentication](../authentication).
+- The price prediction API turned on for your organization. Until it is, every call
+  answers 403 `feature_not_enabled`. Ask your account manager.
+- Decide which view your application needs. Your account manager sets it on the key.
+
+| View | Key | What it answers |
+| --- | --- | --- |
+| Pooled | A key that is not bound to an insurer | Your organization's claims, pooled and anonymised. No provider, surgeon, client or insurer is named, and a figure is shown only when enough cases from enough providers stand behind it. |
+| One insurer | A key bound to one insurer | The same figures, computed for that insurer. You can also price a provider, surgeon or client that appears in that insurer's own claims. |
+
+<Note>
+  Every figure comes from a model trained on all of your organization's claims. A key
+  bound to an insurer, and a provider, surgeon or client input, steer that model
+  toward the case you describe. They do not limit it to that insurer's claims.
+</Note>
+
+## The flow
+
+<Steps>
+  <Step title="List what you can price">
+    Call [`GET /api/v1/predict/price/concepts/`](/api-reference/pricing/diagnoses-and-procedures-you-can-price)
+    to fill your diagnosis or procedure picker. A procedure is priced by id only, and
+    this list is where its id comes from. Only the diagnoses and procedures with enough
+    of your cases behind them are listed, so a listed row usually returns a price.
+
+    ```bash
+    curl "https://api.v2.healthproximate.com/api/v1/predict/price/concepts/?domain=procedure&search=knee&page_size=20" \
+      -H "X-API-Key: hpx_..."
+    ```
+
+    ```json
+    {
+      "results": [
+        {
+          "concept_id": "3f0c2a4e-7b1d-4c6a-9e2f-5a8b7c6d1e0f",
+          "code": null,
+          "vocabulary": null,
+          "name": "Total Knee Replacement"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "page_size": 20
+    }
+    ```
+
+    The list changes slowly. Cache it in your application for up to an hour.
+  </Step>
+
+  <Step title="One insurer only: list providers, surgeons and clients">
+    With a key bound to an insurer, call
+    [`GET /api/v1/predict/price/options/`](/api-reference/pricing/providers-surgeons-and-clients-a-payor-bound-key-can-price-for)
+    for the chosen diagnosis or procedure. It lists the providers, surgeons and client
+    organizations in that insurer's own claims for it. Skip this step with a pooled key:
+    it answers 403 `payor_bound_key_required`.
+
+    ```bash
+    curl "https://api.v2.healthproximate.com/api/v1/predict/price/options/?domain=procedure&concept_id=3f0c2a4e-7b1d-4c6a-9e2f-5a8b7c6d1e0f" \
+      -H "X-API-Key: hpx_..."
+    ```
+  </Step>
+
+  <Step title="Get the price">
+    Call [`POST /api/v1/predict/price/`](/api-reference/pricing/expected-price-for-a-diagnosis-or-procedure).
+    A diagnosis can be sent as an ICD-10 `code`; a procedure is sent as the
+    `concept_id` from step 1. `age`, `gender`, `los` and `is_surgical` are optional.
+
+    ```bash Pooled key, a procedure
+    curl -X POST https://api.v2.healthproximate.com/api/v1/predict/price/ \
+      -H "X-API-Key: hpx_..." \
+      -H "Content-Type: application/json" \
+      -d '{
+        "domain": "procedure",
+        "concept_id": "3f0c2a4e-7b1d-4c6a-9e2f-5a8b7c6d1e0f",
+        "age": 62,
+        "gender": "F"
+      }'
+    ```
+
+    ```bash Insurer-bound key, a diagnosis at one provider
+    curl -X POST https://api.v2.healthproximate.com/api/v1/predict/price/ \
+      -H "X-API-Key: hpx_..." \
+      -H "Content-Type: application/json" \
+      -d '{
+        "domain": "condition",
+        "code": "K35.80",
+        "provider_id": "6b0f6a0e-8d2c-4a55-9a3e-0c7d3f1b2a10"
+      }'
+    ```
+
+    A provider, surgeon or client id must come from step 2 for the same diagnosis or
+    procedure. Any other id is refused with 403 `entity_not_permitted`.
+  </Step>
+</Steps>
+
+## Read the answer
+
+| Field | Use it for |
+| --- | --- |
+| `result` | `estimate`, or `insufficient_data` when too few of your cases stand behind a figure. Show "not enough data", never a zero. |
+| `point` | The expected price, in `currency` (MYR). |
+| `interval` | The range: `low`, `high`, and the `coverage` it is built for (0.9 = 90% of outcomes). |
+| `case_count` | Your organization's own cases behind the figure, rounded down to the nearest 10. |
+| `breakdown` | One row per billing group: `group` and `amount`. Present for a model figure, null for a figure from your claims history. |
+| `inputs_applied` | Which of `payor`, `provider`, `surgeon`, `client` the figure was computed for. An input the model did not see in training is left out. A figure from your claims history ignores every input, so the list is empty: label such a figure as your organization-wide price. |
+| `basis` | Where the figure came from. `basis.result_kind` is `model` or `own_history_range`. |
+
+<Note>
+  An estimate is not a quote. Show the range with the point, and show
+  `case_count` so your users can judge how much data is behind it.
+</Note>
+
+## Errors you should handle
+
+| Status | `code` | What to do |
+| --- | --- | --- |
+| 400 | `code_or_concept_id`, `invalid_code`, `invalid_concept_id`, `validation_failed`, `field_not_accepted` | Fix the request. The body names the field or parameter. |
+| 400 | `entity_not_accepted`, `payor_id_not_accepted` | Your key is pooled. Do not send `provider_id`, `surgeon_id`, `client_id` or `payor_id`. |
+| 403 | `entity_not_permitted`, `payor_not_permitted` | The id is not in your insurer's own claims for this concept. Pick from step 2. |
+| 403 | `feature_not_enabled`, `permission_denied` | Access is not set up. Contact your account manager. |
+| 404 | `concept_not_found` | No diagnosis category or procedure matches. |
+| 422 | `clinically_invalid_input`, `input_out_of_distribution` | The inputs cannot be priced together. `invalid_fields` names them. |
+| 429 | `throttled` | Wait as `Retry-After` says, then retry. |
+| 503 | `prediction_unavailable` | Retry later with backoff. |
+
+Every call to these three endpoints counts toward your plan's monthly request limit.
+See [Errors and limits](../errors-and-limits).

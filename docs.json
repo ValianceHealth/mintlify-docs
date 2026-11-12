@@ -138,6 +138,9 @@
             "group": "Pricing",
             "openapi": "api/openapi-commercial.yaml",
             "pages": [
+              "api/pricing/in-your-app",
+              "GET /api/v1/predict/price/concepts/",
+              "GET /api/v1/predict/price/options/",
               "POST /api/v1/predict/price/"
             ]
           },
