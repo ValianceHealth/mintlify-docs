@@ -2855,18 +2855,35 @@ paths:
         \ 10; it is not the number of\ncases a model was trained on. A model answer that found no similar\
         \ cases is\n`insufficient_data` too. `basis.window_months` is the rolling admission window the\
         \ cases are drawn\nfrom. Figures from a model trained on a group of organizations are `insufficient_data`.\n\
-        \n**Payor-bound keys.** A key can be bound to one payor by your account manager. Its model\nanswers\
-        \ are then fed that payor (`payor_applied: true`), and a different `payor_id` in\nthe request\
-        \ is refused with 403. Own-history figures (`basis.result_kind` is\n`own_history_range`) are your\
-        \ organization's claims across all payors, so `payor_applied`\nis `false` for them. Any other\
-        \ key is pooled and must not send `payor_id` (400).\n\n**Concept.** For `domain=condition` send\
-        \ either `code` (an ICD-10 code; only its\n3-character category is used, and that category is\
-        \ the same in ICD-10 and ICD-10-CM) or\n`concept_id`. The answer uses the vocabulary your organization's\
-        \ claims are coded in;\n`concept.vocabulary` in the response says which, and `vocabulary` in the\
-        \ request is\noptional and does not change it. For `domain=procedure` send `concept_id` (the procedure\n\
-        id): procedure codes are not looked up.\n\n**Access.** Every API key needs the `predict:price`\
-        \ scope (a key with no scopes is\nrefused), and the organization must have the\nprice prediction\
-        \ API enabled (403 `feature_not_enabled` otherwise).\n    "
+        \n**Payor-bound keys.** A key can be bound to one insurer by your account manager. Its\nmodel\
+        \ answers are then fed that insurer; `payor_id`, if sent, must be the insurer's own id\n(its payor\
+        \ organization id), and any other is refused with 403 `payor_not_permitted`. A\nbound key may\
+        \ also send `provider_id`, `surgeon_id` and `client_id`, each an id\n`GET /api/v1/predict/price/options/`\
+        \ lists for the concept (the providers, surgeons and\nclient organizations in the insurer's own\
+        \ claims); any other id, whether it exists\nelsewhere or nowhere, is 403 `entity_not_permitted`.\n\
+        \n**What a model figure is learned from.** The model is trained on ALL of your\norganization's\
+        \ claims, every insurer's. A bound key's insurer, provider, surgeon and\nclient CONDITION that\
+        \ model (the figure is what the model expects for those inputs); they\ndo not restrict the figure\
+        \ to the insurer's own claims, and `case_count` is your\norganization's cases for the concept,\
+        \ not the insurer's.\n\n**`inputs_applied`.** The inputs the figure was computed for (`client`,\
+        \ `payor`,\n`provider`, `surgeon`, sorted): only the ones the model recognized from its training\
+        \ data.\nAn input the model never saw (an insurer, provider, surgeon or client with no claims\
+        \ in\nits training data, or one added since it was trained) is not applied and not listed: the\n\
+        figure is then the one for \"not specified\". `payor_applied` is `\"payor\" in\ninputs_applied`.\
+        \ Own-history figures (`basis.result_kind` is `own_history_range`) are your\norganization's claims\
+        \ across all payors and entities, so `inputs_applied` is `[]` and\n`payor_applied` is `false`\
+        \ for them, as for `insufficient_data`.\n\n**Unbound keys.** Any other key (and a user login)\
+        \ is pooled and anonymised: it must not\nsend `payor_id` (400 `payor_id_not_accepted`) or `provider_id`,\
+        \ `surgeon_id`, `client_id`\n(400 `entity_not_accepted`), and its `inputs_applied` is always `[]`.\n\
+        \n**Concept.** For `domain=condition` send either `code` (an ICD-10 code; only its\n3-character\
+        \ category is used, and that category is the same in ICD-10 and ICD-10-CM) or\n`concept_id`. The\
+        \ answer uses the vocabulary your organization's claims are coded in;\n`concept.vocabulary` in\
+        \ the response says which, and `vocabulary` in the request is\noptional and does not change it.\
+        \ For `domain=procedure` send `concept_id` (the procedure\nid): procedure codes are not looked\
+        \ up. `GET /api/v1/predict/price/concepts/` lists the\nconcepts whose claims meet the minimum\
+        \ cell, with their `concept_id`.\n\n**Access.** Every API key needs the `predict:price` scope\
+        \ (a key with no scopes is\nrefused), and the organization must have the\nprice prediction API\
+        \ enabled (403 `feature_not_enabled` otherwise).\n    "
       summary: Expected price for a diagnosis or procedure
       tags:
       - Pricing
@@ -2907,6 +2924,7 @@ paths:
                     metric: price
                     currency: MYR
                     payor_applied: false
+                    inputs_applied: []
                     concept:
                       domain: condition
                       concept_id: 4213
@@ -2930,12 +2948,47 @@ paths:
                       amount: 2900.0
                     - group: Others
                       amount: 410.0
+                EstimateForAPayor-boundKey'sInputs:
+                  value:
+                    result: estimate
+                    metric: price
+                    currency: MYR
+                    payor_applied: true
+                    inputs_applied:
+                    - payor
+                    - provider
+                    - surgeon
+                    concept:
+                      domain: condition
+                      concept_id: 4213
+                      code: K35
+                      vocabulary: ICD10CM
+                    point: 8450.0
+                    interval:
+                      low: 6100.0
+                      high: 12900.0
+                      coverage: 0.9
+                    case_count: 210
+                    basis:
+                      result_kind: model
+                      method: trained_model
+                      tier: info
+                      reasons: []
+                      label: null
+                      window_months: 24
+                    breakdown:
+                    - group: Room & board
+                      amount: 2900.0
+                    - group: Others
+                      amount: 410.0
+                  summary: Estimate for a payor-bound key's inputs
                 InsufficientData:
                   value:
                     result: insufficient_data
                     metric: price
                     currency: MYR
                     payor_applied: false
+                    inputs_applied: []
                     concept:
                       domain: condition
                       concept_id: 4213
@@ -2959,6 +3012,42 @@ paths:
                     detail: Not a valid ICD-10 code.
                     code: invalid_code
                   summary: Invalid code
+                CodeOrConceptId:
+                  value:
+                    detail: Send exactly one of `code` (domain `condition` only) and `concept_id`.
+                    code: code_or_concept_id
+                  summary: Code or concept id
+                InvalidConceptId:
+                  value:
+                    detail: Not a valid procedure id.
+                    code: invalid_concept_id
+                  summary: Invalid concept id
+                UnknownField:
+                  value:
+                    detail: These fields are not accepted.
+                    code: field_not_accepted
+                  summary: Unknown field
+                ValidationFailed:
+                  value:
+                    detail: Validation failed.
+                    code: validation_failed
+                  summary: Validation failed
+                PayorFromAnUnboundKey:
+                  value:
+                    detail: This key is not payor-bound, so `payor_id` is not accepted.
+                    code: payor_id_not_accepted
+                  summary: Payor from an unbound key
+                EntityFromAnUnboundKey:
+                  value:
+                    detail: This key is not payor-bound, so `provider_id`, `surgeon_id` and `client_id`
+                      are not accepted.
+                    code: entity_not_accepted
+                  summary: Entity from an unbound key
+                SeveralOrganizations:
+                  value:
+                    detail: Name exactly one organization in `view_as`.
+                    code: single_organization_required
+                  summary: Several organizations
           description: Invalid request
         '401':
           content:
@@ -2982,8 +3071,30 @@ paths:
                     detail: Price prediction is not enabled for this organization.
                     code: feature_not_enabled
                   summary: Not enabled
-          description: The key lacks the scope, the feature is not enabled, `view_as` names another organization,
-            or `payor_id` is not the key's payor
+                ScopeMissing:
+                  value:
+                    detail: This API key's scopes do not cover this endpoint.
+                    code: permission_denied
+                  summary: Scope missing
+                NoOrganization:
+                  value:
+                    detail: This caller has no acting organization.
+                    code: organization_required
+                  summary: No organization
+                AnotherPayor:
+                  value:
+                    detail: This key may only answer for its own payor.
+                    code: payor_not_permitted
+                  summary: Another payor
+                EntityNotInOwnClaims:
+                  value:
+                    detail: This key may only name providers, surgeons and clients from its own claims
+                      for this concept.
+                    code: entity_not_permitted
+                  summary: Entity not in own claims
+          description: The key lacks the scope, the feature is not enabled, the caller has no organization,
+            `view_as` names another organization, `payor_id` is not the key's insurer, or a `provider_id`
+            / `surgeon_id` / `client_id` is not in the key's own claims for the concept
         '404':
           content:
             application/json:
@@ -3008,6 +3119,348 @@ paths:
                     code: clinically_invalid_input
                   summary: Inconsistent inputs
           description: The inputs are clinically inconsistent or outside what the model accepts
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                Unavailable:
+                  value:
+                    detail: The price model is unavailable. Try again later.
+                    code: prediction_unavailable
+          description: The price model is unavailable; retry later
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                Throttled:
+                  value:
+                    detail: Request was throttled. Expected available in 30 seconds.
+                    code: throttled
+          description: Rate limit or monthly request limit reached
+  /api/v1/predict/price/concepts/:
+    get:
+      operationId: v1_predict_price_concepts_list
+      description: "\nThe diagnosis categories (`domain=condition`) or procedures (`domain=procedure`)\
+        \ your\norganization's claims can price: the ids `POST /api/v1/predict/price/` takes as\n`concept_id`.\
+        \ A procedure is priced by id only, and this list is where its id comes from.\n\n**What is listed.**\
+        \ Only the concepts whose claims meet the price endpoint's minimum cell\norganization-wide: at\
+        \ least 20 of your organization's own usable claims (discharged,\npriced, not excluded, in the\
+        \ rolling admission window the price endpoint draws from) from\nat least 5 providers, no provider\
+        \ above 25% of them. Nothing from any other organization.\nA concept below the cell is not listed\
+        \ at all, so the list never tells a concept with no\nclaims from one with a few. No counts and\
+        \ no provider data are returned.\n\n**What a listing means.** A listed concept usually returns\
+        \ a figure, though the inputs you\nsend (a gender, an age) can narrow the cases behind it below\
+        \ the cell, and the answer is\nthen `insufficient_data`. An unlisted concept usually returns `insufficient_data`,\
+        \ though\na narrower cohort (a gender, an age band) can occasionally meet the cell on its own.\n\
+        \n**Rows.** A diagnosis row carries its 3-character ICD-10 `code` and the `vocabulary` your\n\
+        claims are coded in; a procedure row has a null `code` and `vocabulary`. Rows are ordered\nby\
+        \ `name` (case-insensitive), then `concept_id`. `search` keeps the rows whose name (or,\nfor a\
+        \ diagnosis, code) contains it, ignoring case.\n\n**Paging.** `page` (default 1) and `page_size`\
+        \ (default 20, clamped to 100);\na value that is not an integer of 1 or more is 400 `validation_failed`.\
+        \ `total` counts the\nmatching rows over every page.\n\n**Freshness.** The list is computed once\
+        \ per organization and domain. A claims load\nrefreshes it at once; otherwise it is kept for up\
+        \ to an hour.\n\n**Query parameters.** Any parameter other than `domain`, `search`, `page`, `page_size`\n\
+        and `view_as` is refused with 400 `field_not_accepted`, naming it in `fields`.\n\n**Access.**\
+        \ The same as the price endpoint: the `predict:price` scope on every key, one\norganization in\
+        \ `view_as` (400 `single_organization_required`), and the price prediction\nAPI enabled for the\
+        \ organization (403 `feature_not_enabled`). Each call is recorded in\nyour request history as\
+        \ `price_predict_concepts` and counts toward a monthly request limit.\n    "
+      summary: Diagnoses and procedures you can price
+      parameters:
+      - in: query
+        name: domain
+        schema:
+          type: string
+          minLength: 1
+        description: '`condition` (diagnosis categories) or `procedure` (procedures).'
+        required: true
+      - in: query
+        name: page
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+        description: Page number (an integer, 1 or more; default 1). Anything else is a 400.
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+          minimum: 1
+          default: 20
+        description: Rows per page (an integer, 1 or more; default 20, clamped to 100). Anything else
+          is a 400.
+      - in: query
+        name: search
+        schema:
+          type: string
+          maxLength: 100
+        description: Case-insensitive text the name (or, for a diagnosis, the code) contains.
+      tags:
+      - Pricing
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceCatalogueResponse'
+              examples:
+                Diagnoses:
+                  value:
+                    results:
+                    - concept_id: 4213
+                      code: K35
+                      vocabulary: ICD10CM
+                      name: Acute appendicitis
+                    - concept_id: 4987
+                      code: K80
+                      vocabulary: ICD10CM
+                      name: Cholelithiasis
+                    total: 2
+                    page: 1
+                    page_size: 20
+          description: One page of the catalogue.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                ValidationFailed:
+                  value:
+                    detail: Validation failed.
+                    code: validation_failed
+                  summary: Validation failed
+                UnknownParameter:
+                  value:
+                    detail: These query parameters are not accepted.
+                    code: field_not_accepted
+                  summary: Unknown parameter
+                SeveralOrganizations:
+                  value:
+                    detail: Name exactly one organization in `view_as`.
+                    code: single_organization_required
+                  summary: Several organizations
+          description: Invalid query (`validation_failed`), an unknown query parameter (`field_not_accepted`),
+            or several organizations in `view_as`
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                Unauthenticated:
+                  value:
+                    detail: Authentication credentials were not provided.
+                    code: not_authenticated
+          description: Authentication required
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                NotEnabled:
+                  value:
+                    detail: Price prediction is not enabled for this organization.
+                    code: feature_not_enabled
+                  summary: Not enabled
+                ScopeMissing:
+                  value:
+                    detail: This API key's scopes do not cover this endpoint.
+                    code: permission_denied
+                  summary: Scope missing
+                NoOrganization:
+                  value:
+                    detail: This caller has no acting organization.
+                    code: organization_required
+                  summary: No organization
+          description: The key lacks the scope, the feature is not enabled, the caller has no organization,
+            or `view_as` names another organization
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                Throttled:
+                  value:
+                    detail: Request was throttled. Expected available in 30 seconds.
+                    code: throttled
+          description: Rate limit or monthly request limit reached
+  /api/v1/predict/price/options/:
+    get:
+      operationId: v1_predict_price_options_retrieve
+      description: "\nFor a key bound to one insurer: the providers, surgeons and clients that appear\
+        \ in that\ninsurer's own usable claims for one diagnosis or procedure, with the ids\n`POST /api/v1/predict/price/`\
+        \ takes as `provider_id`, `surgeon_id` and `client_id`.\n\n**Payor-bound keys only.** Any other\
+        \ caller (an unbound key, a user login) is refused with\n403 `payor_bound_key_required`: an unbound\
+        \ key prices your organization's claims pooled\nand anonymised, and names no provider, surgeon\
+        \ or client.\n\n**Whose claims.** Only claims your organization holds that the key's insurer paid,\
+        \ for\nthis concept, in the rolling admission window the price endpoint draws from. An entity\n\
+        that appears only in another insurer's claims is never listed, and the price endpoint\nrefuses\
+        \ it (403 `entity_not_permitted`).\n\n**What pricing with them means.** The price model is trained\
+        \ on ALL of your\norganization's claims, every insurer's. Sending one of these ids conditions\
+        \ that model on\nit; it does not restrict the figure to the insurer's own claims. An id the model\
+        \ never saw\nin training is not applied (the price endpoint's `inputs_applied` leaves it out).\n\
+        \n**Rows.** Ids and names only, no counts, one row per id, ordered by name. A claim with no\n\
+        provider, surgeon or client adds nothing to that list. `clients` are client organizations.\n\n\
+        **Concept.** As the price endpoint: for `domain=condition` send `code` (an ICD-10 code; its\n\
+        3-character category is used) or `concept_id`; for `domain=procedure` send `concept_id`\n(from\
+        \ `GET /api/v1/predict/price/concepts/`). Errors: 400 `code_or_concept_id`,\n`invalid_code`, `invalid_concept_id`,\
+        \ 404 `concept_not_found`.\n\n**Query parameters.** Any parameter other than `domain`, `code`,\
+        \ `concept_id` and\n`view_as` is refused with 400 `field_not_accepted`, naming it in `fields`.\n\
+        \n**Access.** The same as the price endpoint: the `predict:price` scope, one organization in\n\
+        `view_as`, and the price prediction API enabled. Each call is recorded in your request\nhistory\
+        \ as `price_predict_options` with the concept and how many providers, surgeons and\nclients were\
+        \ listed (never which), and counts toward a monthly request limit.\n    "
+      summary: Providers, surgeons and clients a payor-bound key can price for
+      parameters:
+      - in: query
+        name: code
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 16
+        description: An ICD-10 code (`K35.80`, `K3580` or `K35`); only its 3-character category is used.
+      - in: query
+        name: concept_id
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 64
+        description: 'The concept id instead of `code`: the `concept_id` of a catalogue row.'
+      - in: query
+        name: domain
+        schema:
+          type: string
+          minLength: 1
+        description: '`condition` (a diagnosis) or `procedure` (a procedure, by `concept_id` only).'
+        required: true
+      tags:
+      - Pricing
+      security:
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceOptionsResponse'
+              examples:
+                Options:
+                  value:
+                    concept:
+                      domain: condition
+                      concept_id: 4213
+                      code: K35
+                      vocabulary: ICD10CM
+                    providers:
+                    - id: 6b0f6a0e-8d2c-4a55-9a3e-0c7d3f1b2a10
+                      name: Example Medical Centre
+                    surgeons:
+                    - id: 1f2e3d4c-5b6a-4978-8a9b-0c1d2e3f4a5b
+                      name: Example Surgeon
+                      title: Dr
+                    clients:
+                    - id: 9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d
+                      name: Example Employer
+          description: The bound insurer's own entities for the concept.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                CodeOrConceptId:
+                  value:
+                    detail: Send exactly one of `code` (domain `condition` only) and `concept_id`.
+                    code: code_or_concept_id
+                  summary: Code or concept id
+                InvalidCode:
+                  value:
+                    detail: Not a valid ICD-10 code.
+                    code: invalid_code
+                  summary: Invalid code
+                InvalidConceptId:
+                  value:
+                    detail: Not a valid procedure id.
+                    code: invalid_concept_id
+                  summary: Invalid concept id
+                ValidationFailed:
+                  value:
+                    detail: Validation failed.
+                    code: validation_failed
+                  summary: Validation failed
+                UnknownParameter:
+                  value:
+                    detail: These query parameters are not accepted.
+                    code: field_not_accepted
+                  summary: Unknown parameter
+                SeveralOrganizations:
+                  value:
+                    detail: Name exactly one organization in `view_as`.
+                    code: single_organization_required
+                  summary: Several organizations
+          description: Invalid query, an unknown query parameter, or several organizations in `view_as`
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                Unauthenticated:
+                  value:
+                    detail: Authentication credentials were not provided.
+                    code: not_authenticated
+          description: Authentication required
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                NotPayor-bound:
+                  value:
+                    detail: Only a payor-bound key can list providers, surgeons and clients.
+                    code: payor_bound_key_required
+                  summary: Not payor-bound
+                NotEnabled:
+                  value:
+                    detail: Price prediction is not enabled for this organization.
+                    code: feature_not_enabled
+                  summary: Not enabled
+                ScopeMissing:
+                  value:
+                    detail: This API key's scopes do not cover this endpoint.
+                    code: permission_denied
+                  summary: Scope missing
+                NoOrganization:
+                  value:
+                    detail: This caller has no acting organization.
+                    code: organization_required
+                  summary: No organization
+          description: Not a payor-bound key, the key lacks the scope, the feature is not enabled, the
+            caller has no organization, or `view_as` names another organization
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceError'
+              examples:
+                UnknownProcedure:
+                  value:
+                    detail: No procedure matches this id.
+                    code: concept_not_found
+                  summary: Unknown procedure
+          description: No diagnosis category or procedure matches
         '429':
           content:
             application/json:
@@ -4826,6 +5279,49 @@ components:
       required:
       - amount
       - group
+    PriceCatalogueResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceCatalogueRow'
+        total:
+          type: integer
+          description: Listed concepts (those meeting the minimum cell) matching the query, over every
+            page.
+        page:
+          type: integer
+        page_size:
+          type: integer
+          description: The page size served (the request's, clamped to 100).
+      required:
+      - page
+      - page_size
+      - results
+      - total
+    PriceCatalogueRow:
+      type: object
+      properties:
+        concept_id:
+          description: 'The id to send as `concept_id`: a procedure id (UUID) or a diagnosis category''s
+            concept id (integer).'
+        code:
+          type: string
+          nullable: true
+          description: The 3-character ICD-10 category; null for a procedure.
+        vocabulary:
+          type: string
+          nullable: true
+          description: '`ICD10CM` or `ICD10`, the vocabulary your claims are coded in; null for a procedure.'
+        name:
+          type: string
+          nullable: true
+      required:
+      - code
+      - concept_id
+      - name
+      - vocabulary
     PriceConcept:
       type: object
       properties:
@@ -4843,6 +5339,18 @@ components:
       - concept_id
       - domain
       - vocabulary
+    PriceEntityOption:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          nullable: true
+      required:
+      - id
+      - name
     PriceError:
       type: object
       properties:
@@ -4870,6 +5378,28 @@ components:
       - coverage
       - high
       - low
+    PriceOptionsResponse:
+      type: object
+      properties:
+        concept:
+          $ref: '#/components/schemas/PriceConcept'
+        providers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceEntityOption'
+        surgeons:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceSurgeonOption'
+        clients:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceEntityOption'
+      required:
+      - clients
+      - concept
+      - providers
+      - surgeons
     PricePredictRequestMetricEnum:
       enum:
       - price
@@ -4920,8 +5450,26 @@ components:
         payor_id:
           type: string
           format: uuid
-          description: 'Only a payor-bound key may send it, and only its own payor. Any other caller:
-            400.'
+          description: 'The insurer (payor organization) id. Only a payor-bound key may send it, and only
+            its own insurer''s id (403 otherwise). Any other caller: 400.'
+        provider_id:
+          type: string
+          format: uuid
+          description: 'A provider id. Only a payor-bound key may send it (400 `entity_not_accepted` otherwise),
+            and only an id listed by `GET /api/v1/predict/price/options/` for this concept: any other
+            id is 403 `entity_not_permitted`.'
+        surgeon_id:
+          type: string
+          format: uuid
+          description: 'A surgeon id. Only a payor-bound key may send it (400 `entity_not_accepted` otherwise),
+            and only an id listed by `GET /api/v1/predict/price/options/` for this concept: any other
+            id is 403 `entity_not_permitted`.'
+        client_id:
+          type: string
+          format: uuid
+          description: 'A client (client organization) id. Only a payor-bound key may send it (400 `entity_not_accepted`
+            otherwise), and only an id listed by `GET /api/v1/predict/price/options/` for this concept:
+            any other id is 403 `entity_not_permitted`.'
       required:
       - domain
     PricePredictResponse:
@@ -4935,9 +5483,19 @@ components:
           type: string
         payor_applied:
           type: boolean
-          description: True only when a payor-bound key's payor was fed to the model. Own-history figures
-            are your organization's claims across all payors, so it is false for them and for unbound
-            keys.
+          description: True only when a payor-bound key's insurer was fed to the model AND the model recognized
+            it from its training data. Own-history figures are your organization's claims across all payors,
+            so it is false for them and for unbound keys. The same as `"payor" in inputs_applied`.
+        inputs_applied:
+          type: array
+          items:
+            type: string
+          description: 'The entity inputs the figure was computed for, sorted: any of `client`, `payor`,
+            `provider`, `surgeon`, and only those the model recognized from its training data (an unseen
+            id is not applied). The model is trained on all of your organization''s claims: an input conditions
+            it, it does not restrict it to one insurer''s claims. Only a model answer uses inputs, so
+            it is `[]` for an own-history figure, for `insufficient_data` and for every key that is not
+            payor-bound.'
         concept:
           $ref: '#/components/schemas/PriceConcept'
         point:
@@ -4968,11 +5526,28 @@ components:
       - case_count
       - concept
       - currency
+      - inputs_applied
       - interval
       - metric
       - payor_applied
       - point
       - result
+    PriceSurgeonOption:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+      required:
+      - id
+      - name
+      - title
     RedactRequestRequest:
       type: object
       properties:
