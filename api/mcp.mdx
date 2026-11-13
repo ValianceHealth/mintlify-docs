@@ -1,0 +1,138 @@
+---
+title: "MCP server"
+description: "Connect Claude Code, Codex, Cursor or Microsoft 365 Copilot to Healthproximate's read-only case, DRG and coding tools."
+---
+
+{/* The source of this page is docs/api/mcp.mdx in healthproximate.
+    sync-commercial-docs.yml copies it here. Edit it there, not here.
+    tests/mcp_server/test_mcp_docs.py fails the build when the tool table below
+    and the server's tool allowlist disagree. */}
+
+Healthproximate serves Val's read-only tools over the
+[Model Context Protocol](https://modelcontextprotocol.io) (MCP) at one URL:
+
+```
+https://api.v2.healthproximate.com/api/v1/mcp/
+```
+
+Any MCP client that speaks **Streamable HTTP** can use it. This page covers Claude
+Code, Codex CLI and Cursor. Microsoft 365 Copilot users sign in with their work
+account instead of a key: see [Microsoft 365 Copilot](/api/m365-copilot).
+
+The server is stateless: each request is one JSON-RPC 2.0 message, answered as
+`application/json`. There is no SSE stream and no session, and a `GET` is `405`.
+The request and response envelope is under **MCP** in the API Reference tab.
+
+## Before you start
+
+Ask your Valiance contact to:
+
+1. turn on the **MCP server** feature for your organization, and
+2. issue an **API key with the `mcp` scope** (it starts `hpx_`). A key without
+   that scope, including a key with no scopes at all, is refused with
+   `403 permission_denied`.
+
+Keep the key in your environment, not in a file you commit:
+
+```bash
+export HP_MCP_KEY=hpx_live_...
+```
+
+## Claude Code
+
+```bash
+claude mcp add --transport http healthproximate \
+  https://api.v2.healthproximate.com/api/v1/mcp/ \
+  --header "Authorization: Bearer $HP_MCP_KEY"
+```
+
+Add `--scope user` to use it in every project. Check it with `claude mcp list`
+(it should show `healthproximate ... connected`), or `/mcp` inside a session.
+Then ask, for example: *"Which MS-DRG does principal diagnosis I21.09, male, no
+procedures group to?"*
+
+That command stores the key's value in your Claude Code config. To keep only a
+reference to the variable, put the server in a project `.mcp.json` instead:
+
+```json
+{
+  "mcpServers": {
+    "healthproximate": {
+      "type": "http",
+      "url": "https://api.v2.healthproximate.com/api/v1/mcp/",
+      "headers": { "Authorization": "Bearer ${HP_MCP_KEY}" }
+    }
+  }
+}
+```
+
+## Codex CLI
+
+In `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.healthproximate]
+url = "https://api.v2.healthproximate.com/api/v1/mcp/"
+bearer_token_env_var = "HP_MCP_KEY"
+```
+
+`codex mcp list` should show the server; `/mcp` in a session lists its tools.
+
+## Cursor
+
+In `~/.cursor/mcp.json` (every project) or `.cursor/mcp.json` (one project):
+
+```json
+{
+  "mcpServers": {
+    "healthproximate": {
+      "url": "https://api.v2.healthproximate.com/api/v1/mcp/",
+      "headers": { "Authorization": "Bearer ${env:HP_MCP_KEY}" }
+    }
+  }
+}
+```
+
+Open Cursor Settings, then MCP, and check that `healthproximate` is enabled with
+its tools listed.
+
+## Tools
+
+Every tool reads; none writes. Each call acts for your key's own organization,
+and no argument can name another. `tools/list` returns the exact input schema of
+each tool your organization is given; the table summarises it. Required inputs
+are marked **required**.
+
+| Tool | What it answers | Inputs |
+| --- | --- | --- |
+| `get_case_details` | One case's clinical and financial summary: age, length of stay, procedure, diagnosis, key financial figures, and its coding (DRG, ICD-10-CM diagnoses, procedure codes). | `case_id` **required** (case UUID or hospital case number); `metric`: `cost`, `revenue`, `profit` or `margin` |
+| `get_cohort_availability` | How much case history your organization has for a procedure, per age band and per gender, with a confidence tier. Counts only, no patient data. | `procedure_id` **required** (a Healthproximate procedure UUID; the MCP server has no tool to look one up yet, so you supply it); `metric`: `price`, `cost` or `time` (default `price`) |
+| `classify_drg` | ICD-10-CM diagnosis and ICD-10-PCS procedure codes in, one MS-DRG out, with its description, MDC and type. | `dx_codes` **required** (array; the first is the principal diagnosis); `pr_codes` (array); `gender`: `F` or `M`; `is_alive` (boolean); `discharge_status` (UB-04 code, such as `07`); `version`: `v35` to `v44` (default `v40`) |
+| `find_codes` | Free clinical text coded into one vocabulary's codes. | `query` **required**; `target_vocabulary` **required**: `ICD10CM`, `ICD10PCS`, `CPT4`, `RxNorm` or `SNOMED`; `domain` (an OMOP domain, such as `Procedure`); `top_k` (default 10, at most 25) |
+| `prom_summary` | Patient-reported outcome (PROM) response rates and mean scores per procedure, cohort or form. Offered only where PROMs are enabled for your organization. | `instrument` (such as `eq5d5l`; omit for all); `wave_day` (days from the procedure, such as `90`); `group_by`: `procedure`, `cohort` or `form`; `sent_from`, `sent_to` (`YYYY-MM-DD`) |
+
+A tool's own failure (a case or procedure not found in your organization, or
+invalid arguments) is a normal result with `isError: true` and a fixed message.
+A tool name that is not listed for your organization is the JSON-RPC error
+`-32602` `Unknown tool`.
+
+Results are redacted and capped at 50 KB before they reach your client. See
+[MCP security](/api/mcp-security).
+
+## Limits and errors
+
+A key may make **60 calls a minute** to the MCP server, counted apart from its
+other `/api/v1/` budgets.
+
+| Response | Cause |
+| --- | --- |
+| HTTP `401` | Missing or wrong key, or the `Authorization` header is not `Bearer hpx_...` |
+| HTTP `403` `permission_denied` | The key lacks the `mcp` scope |
+| HTTP `403` `feature_not_enabled` | The MCP server feature is off for your organization |
+| HTTP `403` `origin_not_allowed` | The request carried an `Origin` header (a browser page) that is not a Healthproximate origin. Requests with no `Origin`, such as CLI clients, are unaffected |
+| HTTP `429` | Over 60 calls a minute for this key |
+| HTTP `400`, JSON-RPC `-32700` | The body is not JSON |
+| HTTP `400`, JSON-RPC `-32022` | The client asked for an MCP protocol version the server does not speak; `data.supported` lists the ones it does (`2026-07-28`, and `2025-11-25` back to `2024-11-05` through `initialize`). Update the client |
+| HTTP `400`, JSON-RPC `-32600` | The body is not one JSON-RPC request (a batch is refused) |
+| HTTP `200`, JSON-RPC `-32601` | A method other than `initialize`, `server/discover`, `ping`, `tools/list` and `tools/call` (on a `2026-07-28` request: HTTP `404`) |
+| HTTP `200`, JSON-RPC `-32602` | Invalid params, or a tool not listed for your organization |

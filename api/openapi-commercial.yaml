@@ -2295,6 +2295,215 @@ paths:
           description: An OpenAI-shaped model list
         '401':
           description: Missing or invalid API key
+  /api/v1/mcp/:
+    post:
+      operationId: v1_mcp_create
+      description: 'One JSON-RPC 2.0 message per POST, answered as `application/json`. MCP `2026-07-28`
+        (version, client and capabilities in `params._meta` and the `MCP-Protocol-Version` header): `server/discover`,
+        `tools/list`, `tools/call`. Legacy clients (`2025-11-25` and earlier) open with `initialize`.
+        A version the server does not speak is a 400 with JSON-RPC error `-32022` listing `supported`
+        and `requested`. No SSE and no session; GET is 405. A present `Origin` that is not ours is a 403
+        `origin_not_allowed`. Needs an API key with the `mcp` scope, or an Entra ID access token with
+        the `access_as_user` scope from a tenant set up for SSO (401 with a `code` otherwise), on an organization
+        with the `mcp_server` flag (403 `feature_not_enabled` otherwise). A notification (no `id`) is
+        answered 202. Each key, or each Entra user per tenant, may make 60 calls a minute.'
+      summary: MCP server (Streamable HTTP, stateless JSON mode)
+      tags:
+      - MCP
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - jsonrpc
+              - method
+              properties:
+                jsonrpc:
+                  type: string
+                  enum:
+                  - '2.0'
+                id:
+                  oneOf:
+                  - type: string
+                  - type: integer
+                  description: Omit for a notification (answered 202, no body).
+                method:
+                  type: string
+                  enum:
+                  - initialize
+                  - server/discover
+                  - ping
+                  - tools/list
+                  - tools/call
+                  description: Any other method is error `-32601`.
+                params:
+                  type: object
+                  description: '`tools/call` takes `name` and `arguments`; `initialize` takes `protocolVersion`,
+                    `capabilities` and `clientInfo`.'
+            examples:
+              Tools/call:
+                value:
+                  jsonrpc: '2.0'
+                  id: 1
+                  method: tools/call
+                  params:
+                    name: classify_drg
+                    arguments:
+                      dx_codes:
+                      - I21.09
+                      gender: M
+                summary: tools/call
+      security:
+      - entra_bearer_auth: []
+      - api_key_auth: []
+      - jwt_auth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - jsonrpc
+                - id
+                properties:
+                  jsonrpc:
+                    type: string
+                    enum:
+                    - '2.0'
+                  id:
+                    oneOf:
+                    - type: string
+                    - type: integer
+                    nullable: true
+                  result:
+                    type: object
+                    description: '`tools/call`: `content` (one text block) and `isError`. `tools/list`:
+                      `tools`, each with `name`, `description` and `inputSchema`.'
+                  error:
+                    type: object
+                    required:
+                    - code
+                    - message
+                    properties:
+                      code:
+                        type: integer
+                        description: '`-32700` parse error and `-32600` invalid request (HTTP 400); `-32601`
+                          method not found and `-32602` invalid params or unknown tool (HTTP 200).'
+                      message:
+                        type: string
+              examples:
+                Tools/callResult:
+                  value:
+                    jsonrpc: '2.0'
+                    id: 1
+                    result:
+                      content:
+                      - type: text
+                        text: '...'
+                      isError: false
+                  summary: tools/call result
+                MethodNotFound:
+                  value:
+                    jsonrpc: '2.0'
+                    id: 2
+                    error:
+                      code: -32601
+                      message: Method not found
+                  summary: Method not found
+          description: A JSON-RPC result or error.
+        '202':
+          description: A notification was accepted.
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - jsonrpc
+                - id
+                properties:
+                  jsonrpc:
+                    type: string
+                    enum:
+                    - '2.0'
+                  id:
+                    oneOf:
+                    - type: string
+                    - type: integer
+                    nullable: true
+                  result:
+                    type: object
+                    description: '`tools/call`: `content` (one text block) and `isError`. `tools/list`:
+                      `tools`, each with `name`, `description` and `inputSchema`.'
+                  error:
+                    type: object
+                    required:
+                    - code
+                    - message
+                    properties:
+                      code:
+                        type: integer
+                        description: '`-32700` parse error and `-32600` invalid request (HTTP 400); `-32601`
+                          method not found and `-32602` invalid params or unknown tool (HTTP 200).'
+                      message:
+                        type: string
+              examples:
+                ParseError:
+                  value:
+                    jsonrpc: '2.0'
+                    id: null
+                    error:
+                      code: -32700
+                      message: Parse error
+                  summary: Parse error
+          description: Parse error (-32700), invalid request (-32600), invalid params (-32602), header
+            mismatch (-32020) or unsupported protocol version (-32022).
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                  code:
+                    type: string
+          description: 'No credential, or an Entra token refused (`code`: invalid_token, expired, bad_audience,
+            bad_issuer, missing_scope, wrong_tenant, no_matching_user).'
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                  code:
+                    type: string
+              examples:
+                FlagOff:
+                  value:
+                    detail: The MCP server is not enabled for this organization.
+                    code: feature_not_enabled
+                  summary: Flag off
+          description: '`feature_not_enabled` (flag off) or `permission_denied` (the key lacks the `mcp`
+            scope, or `view_as` names an organization the credential cannot act as) or `origin_not_allowed`
+            (a present `Origin` that may not call).'
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                  code:
+                    type: string
+          description: Over 60 calls a minute for this key or Entra user.
+        '404':
+          description: A `2026-07-28` request for a method the server does not serve (-32601).
   /api/v1/omop/code/:
     post:
       operationId: v1_omop_code_create
@@ -2859,27 +3068,32 @@ paths:
         \ answers are then fed that insurer; `payor_id`, if sent, must be the insurer's own id\n(its payor\
         \ organization id), and any other is refused with 403 `payor_not_permitted`. A\nbound key may\
         \ also send `provider_id`, `surgeon_id` and `client_id`, each an id\n`GET /api/v1/predict/price/options/`\
-        \ lists for the concept (the providers, surgeons and\nclient organizations in the insurer's own\
-        \ claims); any other id, whether it exists\nelsewhere or nowhere, is 403 `entity_not_permitted`.\n\
-        \n**What a model figure is learned from.** The model is trained on ALL of your\norganization's\
-        \ claims, every insurer's. A bound key's insurer, provider, surgeon and\nclient CONDITION that\
-        \ model (the figure is what the model expects for those inputs); they\ndo not restrict the figure\
-        \ to the insurer's own claims, and `case_count` is your\norganization's cases for the concept,\
-        \ not the insurer's.\n\n**`inputs_applied`.** The inputs the figure was computed for (`client`,\
-        \ `payor`,\n`provider`, `surgeon`, sorted): only the ones the model recognized from its training\
-        \ data.\nAn input the model never saw (an insurer, provider, surgeon or client with no claims\
-        \ in\nits training data, or one added since it was trained) is not applied and not listed: the\n\
-        figure is then the one for \"not specified\". `payor_applied` is `\"payor\" in\ninputs_applied`.\
-        \ Own-history figures (`basis.result_kind` is `own_history_range`) are your\norganization's claims\
-        \ across all payors and entities, so `inputs_applied` is `[]` and\n`payor_applied` is `false`\
-        \ for them, as for `insufficient_data`.\n\n**Unbound keys.** Any other key (and a user login)\
-        \ is pooled and anonymised: it must not\nsend `payor_id` (400 `payor_id_not_accepted`) or `provider_id`,\
-        \ `surgeon_id`, `client_id`\n(400 `entity_not_accepted`), and its `inputs_applied` is always `[]`.\n\
-        \n**Concept.** For `domain=condition` send either `code` (an ICD-10 code; only its\n3-character\
-        \ category is used, and that category is the same in ICD-10 and ICD-10-CM) or\n`concept_id`. The\
-        \ answer uses the vocabulary your organization's claims are coded in;\n`concept.vocabulary` in\
-        \ the response says which, and `vocabulary` in the request is\noptional and does not change it.\
-        \ For `domain=procedure` send `concept_id` (the procedure\nid): procedure codes are not looked\
+        \ lists for the concept; any other id, whether it\nexists elsewhere, is below the floor below,\
+        \ or exists nowhere, is 403\n`entity_not_permitted` (the same body for each).\n\n**The entity\
+        \ floor.** A provider, surgeon or client moves a model figure through what the\nmodel learned\
+        \ from every insurer's claims at it. So an entity is offered and accepted\nonly when your organization's\
+        \ usable claims at it, over every diagnosis and procedure,\ncome from at least 3 insurers and\
+        \ number at least 15; or when every one of those claims\nis the key's own insurer's (a claim whose\
+        \ insurer is unknown breaks that). Below it, one\nor two other insurers' prices could be read\
+        \ back out of the figure.\n\n**What a model figure is learned from.** The model is trained on\
+        \ ALL of your\norganization's claims, every insurer's. A bound key's insurer, provider, surgeon\
+        \ and\nclient CONDITION that model (the figure is what the model expects for those inputs); they\n\
+        do not restrict the figure to the insurer's own claims, and `case_count` is your\norganization's\
+        \ cases for the concept, not the insurer's.\n\n**`inputs_applied`.** The inputs the figure was\
+        \ computed for (`client`, `payor`,\n`provider`, `surgeon`, sorted): only the ones the model recognized\
+        \ from its training data.\nAn input the model never saw (an insurer, provider, surgeon or client\
+        \ with no claims in\nits training data, or one added since it was trained) is not applied and\
+        \ not listed: the\nfigure is then the one for \"not specified\". `payor_applied` is `\"payor\"\
+        \ in\ninputs_applied`. Own-history figures (`basis.result_kind` is `own_history_range`) are your\n\
+        organization's claims across all payors and entities, so `inputs_applied` is `[]` and\n`payor_applied`\
+        \ is `false` for them, as for `insufficient_data`.\n\n**Unbound keys.** Any other key (and a user\
+        \ login) is pooled and anonymised: it must not\nsend `payor_id` (400 `payor_id_not_accepted`)\
+        \ or `provider_id`, `surgeon_id`, `client_id`\n(400 `entity_not_accepted`), and its `inputs_applied`\
+        \ is always `[]`.\n\n**Concept.** For `domain=condition` send either `code` (an ICD-10 code; only\
+        \ its\n3-character category is used, and that category is the same in ICD-10 and ICD-10-CM) or\n\
+        `concept_id`. The answer uses the vocabulary your organization's claims are coded in;\n`concept.vocabulary`\
+        \ in the response says which, and `vocabulary` in the request is\noptional and does not change\
+        \ it. For `domain=procedure` send `concept_id` (the procedure\nid): procedure codes are not looked\
         \ up. `GET /api/v1/predict/price/concepts/` lists the\nconcepts whose claims meet the minimum\
         \ cell, with their `concept_id`.\n\n**Access.** Every API key needs the `predict:price` scope\
         \ (a key with no scopes is\nrefused), and the organization must have the\nprice prediction API\
@@ -3088,8 +3302,8 @@ paths:
                   summary: Another payor
                 EntityNotInOwnClaims:
                   value:
-                    detail: This key may only name providers, surgeons and clients from its own claims
-                      for this concept.
+                    detail: This key may only name a provider, surgeon or client that `GET /api/v1/predict/price/options/`
+                      lists for this concept.
                     code: entity_not_permitted
                   summary: Entity not in own claims
           description: The key lacks the scope, the feature is not enabled, the caller has no organization,
@@ -3305,7 +3519,13 @@ paths:
         \ or client.\n\n**Whose claims.** Only claims your organization holds that the key's insurer paid,\
         \ for\nthis concept, in the rolling admission window the price endpoint draws from. An entity\n\
         that appears only in another insurer's claims is never listed, and the price endpoint\nrefuses\
-        \ it (403 `entity_not_permitted`).\n\n**What pricing with them means.** The price model is trained\
+        \ it (403 `entity_not_permitted`).\n\n**The entity floor.** An entity is listed only when your\
+        \ organization's usable claims at\nit, over every diagnosis and procedure, come from at least\
+        \ 3 insurers and number at least\n15, or are all the key's own insurer's (a claim whose insurer\
+        \ is unknown breaks that).\nThe model's figure for an entity is learned from every insurer's claims\
+        \ at it; below\nthis floor one or two other insurers' prices could be read back out of it. An\
+        \ entity\nthat fails it is not listed, and the price endpoint refuses it with the same 403\n`entity_not_permitted`\
+        \ as any other id it does not take.\n\n**What pricing with them means.** The price model is trained\
         \ on ALL of your\norganization's claims, every insurer's. Sending one of these ids conditions\
         \ that model on\nit; it does not restrict the figure to the insurer's own claims. An id the model\
         \ never saw\nin training is not applied (the price endpoint's `inputs_applied` leaves it out).\n\
@@ -5456,20 +5676,23 @@ components:
           type: string
           format: uuid
           description: 'A provider id. Only a payor-bound key may send it (400 `entity_not_accepted` otherwise),
-            and only an id listed by `GET /api/v1/predict/price/options/` for this concept: any other
-            id is 403 `entity_not_permitted`.'
+            and only an id listed by `GET /api/v1/predict/price/options/` for this concept (the key''s
+            insurer''s own claims, and the entity floor: claims at it from at least 3 insurers and 15
+            in all, or only the insurer''s own): any other id is 403 `entity_not_permitted`.'
         surgeon_id:
           type: string
           format: uuid
           description: 'A surgeon id. Only a payor-bound key may send it (400 `entity_not_accepted` otherwise),
-            and only an id listed by `GET /api/v1/predict/price/options/` for this concept: any other
-            id is 403 `entity_not_permitted`.'
+            and only an id listed by `GET /api/v1/predict/price/options/` for this concept (the key''s
+            insurer''s own claims, and the entity floor: claims at it from at least 3 insurers and 15
+            in all, or only the insurer''s own): any other id is 403 `entity_not_permitted`.'
         client_id:
           type: string
           format: uuid
           description: 'A client (client organization) id. Only a payor-bound key may send it (400 `entity_not_accepted`
-            otherwise), and only an id listed by `GET /api/v1/predict/price/options/` for this concept:
-            any other id is 403 `entity_not_permitted`.'
+            otherwise), and only an id listed by `GET /api/v1/predict/price/options/` for this concept
+            (the key''s insurer''s own claims, and the entity floor: claims at it from at least 3 insurers
+            and 15 in all, or only the insurer''s own): any other id is 403 `entity_not_permitted`.'
       required:
       - domain
     PricePredictResponse:
@@ -6564,6 +6787,13 @@ components:
       name: X-API-Key
       description: API key for organization authentication. Obtain from the organization settings or API
         key management endpoint.
+    entra_bearer_auth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: A Microsoft Entra ID access token (RS256) issued to the Healthproximate MCP app registration
+        with the delegated `access_as_user` scope, as Microsoft 365 Copilot sends. The tenant must be
+        set up for Healthproximate SSO.
     gateway_bearer_auth:
       type: http
       scheme: bearer
@@ -6591,5 +6821,8 @@ tags:
   description: Your own API usage and cost. Readable with any credential, including a key with no scopes
     — billing transparency is not a privilege to withhold. A key sees the requests made with that key;
     a dashboard session sees the requests made in the dashboard.
+- name: MCP
+  description: 'Model Context Protocol server for AI assistants (Claude Code, Codex, Cursor, Microsoft
+    365 Copilot): read-only case, DRG and coding tools over JSON-RPC.'
 servers:
 - url: https://api.v2.healthproximate.com

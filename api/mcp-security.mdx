@@ -1,0 +1,93 @@
+---
+title: "MCP security"
+description: "What happens to every MCP tool result before it leaves Healthproximate: redaction, BAA attestation, the size cap, rate limits and the audit record."
+---
+
+{/* The source of this page is docs/api/mcp-security.mdx in healthproximate.
+    sync-commercial-docs.yml copies it here. Edit it there, not here.
+    The behaviour it describes is mcp_server/phi.py and organization/provider_attestation.py. */}
+
+A tool result leaves Healthproximate for an AI client your organization chose,
+not one we run. So every `tools/call` on the [MCP server](/api/mcp) passes three
+steps, in this order, whatever the tool and whatever the outcome: **redact**,
+**cap**, **audit**.
+
+## Who can call
+
+- **An API key** with the `mcp` scope. A key with no scopes, which reaches the
+  rest of `/api/v1/`, is refused here (`403 permission_denied`).
+- **A Microsoft Entra ID access token** for the Healthproximate MCP app, with the
+  `access_as_user` scope, from a tenant set up for Healthproximate SSO. The call
+  acts as the signed-in person, who must be an active member. This is how
+  [Microsoft 365 Copilot](/api/m365-copilot) connects.
+
+Either way, the organization must have the **MCP server** feature on
+(`403 feature_not_enabled` otherwise). A call acts for exactly one organization:
+the key's own, or one the person belongs to inside the tenant's coverage. No tool
+argument can name another organization, and every tool is read-only.
+
+## Redaction
+
+By default, every text block of every result is redacted before it is sent:
+
+- record ids, email addresses and IC numbers;
+- every numeric date;
+- phone numbers and runs of 6 or more digits;
+- people's names.
+
+They arrive as placeholders such as `[DATE]` and `[NUMBER]`. OMOP concept ids and
+dates in a result read as placeholders too. Redaction fails closed: if the
+redaction engine errors, your client receives a placeholder, never the original
+text.
+
+## Attestation
+
+An administrator of your Healthproximate organization can **attest**, per AI
+client type, that your organization holds a signed Business Associate Agreement
+(BAA), or an equivalent data processing agreement, with that client's provider.
+While the attestation is active, results sent to a client of that type are **not
+redacted**. The size cap and the audit record stay.
+
+| Client type | Which clients fall under it |
+| --- | --- |
+| Microsoft 365 Copilot | Every call made with an Entra ID token |
+| Anthropic (Claude) | An API-key client whose MCP `clientInfo.name` starts with `claude`, ignoring case (Claude Code, Claude Desktop) |
+| OpenAI (ChatGPT, Codex) | An API-key client whose `clientInfo.name` starts with `codex`, `openai` or `chatgpt`, ignoring case |
+
+Any other client, Cursor included, is **always redacted**: there is no
+attestation for it.
+
+An API-key client is recognised by the name it sends in `initialize` (or, on a `2026-07-28` request, in `params._meta`), which is
+the client's own claim. An attestation therefore trusts your key holders to
+connect the client you attested, as you already trust them with the data.
+
+There is no self-service screen for attestation yet. To attest, ask your
+Valiance contact: an admin of your Healthproximate organization then reviews and
+accepts the agreement wording for one client type. The attestation records who accepted which version of the wording,
+and when. A **revoke** takes effect on the very next call, and revoked
+attestations are kept in the history. If the agreement wording changes, it must
+be accepted again.
+
+## Size cap
+
+Each result is capped at **50 KB** of text, counted after redaction, so the cut
+never splits an identifier. A longer result is cut and ends with a line asking
+the assistant to narrow the question (one case, a shorter window, fewer codes).
+
+## Rate limits
+
+**60 calls a minute** per API key, or per Entra user per tenant, counted apart
+from the key's other `/api/v1/` budgets. Over that, the server answers HTTP `429`.
+
+## Audit
+
+Each `tools/call` writes one audit record:
+
+- the organization;
+- whether the caller was an API key or an Entra user, and a hash of which one;
+- the client's name (`clientInfo.name`, from `initialize` or each `2026-07-28` request's `_meta`);
+- the tool and a hash of the case id it asked about;
+- the outcome, the size of the result sent, and whether it was redacted or cut.
+
+Never the arguments' text and never the result. Ask your Valiance contact for
+your organization's records.
