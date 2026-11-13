@@ -55,7 +55,22 @@ client.chat.completions.create(model="<model>", messages=[...])
 ## Scopes
 
 A key may be issued with scopes that narrow which endpoints it can reach:
-`drg:classify`, `llm:chat`, `predict:price`, `redact`, `search`.
+
+| Scope | Endpoints |
+|---|---|
+| `drg:classify` | `/api/v1/drg/`, FHIR `$classify-drg` |
+| `autocode` | FHIR `$autocode` and its jobs |
+| `predict:price` | `/api/v1/predict/price/` |
+| `llm:chat` | `/api/v1/llm/` |
+| `mcp` | `/api/v1/mcp/` |
+| `redact` | `/api/v1/redact/` |
+| `search` | `/api/v1/search/` |
+| `vocabulary` | `/api/v1/omop/`, FHIR `CodeSystem`, `ValueSet`, `ConceptMap` |
+| `upload` | `/api/v1/upload/` |
+| `usage` | `/api/v1/usage/` — every key has it |
+
+A key with no scopes reaches every published endpoint, except FHIR `$autocode`:
+it needs both the `autocode` and `vocabulary` scopes and is enabled per organization.
 
 An out-of-scope call returns **403**, and the body names the scopes your key
 holds. That is a request for access, not a reason to rotate the key.

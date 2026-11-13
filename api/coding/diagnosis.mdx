@@ -19,17 +19,17 @@ curl https://api.v2.healthproximate.com/api/v1/search/ \
   -H "Content-Type: application/json" \
   -d '{
     "query": "community acquired pneumonia",
-    "domain": "Condition",
-    "vocabulary": "ICD10CM",
-    "limit": 5
+    "domain_id": "Condition",
+    "vocabularies": ["ICD10CM"],
+    "top_k": 5
   }'
 ```
 
-The response ranks candidate concepts with codes, names, and match scores. Filter by `domain: "Condition"` so procedure and drug concepts stay out of diagnosis results.
+The response ranks candidate concepts with codes, names, and match scores. Filter by `domain_id: "Condition"` so procedure and drug concepts stay out of diagnosis results.
 
 ## Code to SNOMED CT instead
 
-Change one field: `"vocabulary": "SNOMED"`. Same request, same response shape.
+Change one field: `"vocabularies": ["SNOMED"]`. Same request, same response shape.
 
 <Note>
 One search field serves both vocabularies. If you consume SNOMED and ICD-10 side by side, run the search per vocabulary — do not mix them in one call and split the results by code shape.

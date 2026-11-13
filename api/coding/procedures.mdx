@@ -3,7 +3,7 @@ title: "Procedure coding"
 description: "Code procedures to ICD-10-PCS or OPCS-4 — and understand why the procedure code decides the DRG."
 ---
 
-Procedure coding runs through the same [`POST /api/v1/search/`](/api-reference) endpoint, with `domain: "Procedure"`.
+Procedure coding runs through the same [`POST /api/v1/search/`](/api-reference) endpoint, with `domain_id: "Procedure"`.
 
 | Vocabulary | Parameter value | Status |
 | --- | --- | --- |
@@ -18,9 +18,9 @@ curl https://api.v2.healthproximate.com/api/v1/search/ \
   -H "Content-Type: application/json" \
   -d '{
     "query": "total knee replacement",
-    "domain": "Procedure",
-    "vocabulary": "ICD10PCS",
-    "limit": 5
+    "domain_id": "Procedure",
+    "vocabularies": ["ICD10PCS"],
+    "top_k": 5
   }'
 ```
 
