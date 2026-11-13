@@ -1,0 +1,102 @@
+---
+title: "Microsoft 365 Copilot"
+description: "Install the Val agent in your Microsoft 365 tenant so Copilot users can ask Healthproximate questions with their work account."
+---
+
+{/* The source of this page is docs/api/m365-copilot.mdx in healthproximate.
+    sync-commercial-docs.yml copies it here. Edit it there, not here.
+    Valiance's own setup (Entra app, package build) is docs/api/m365-copilot-agent.md. */}
+
+Val reaches Microsoft 365 Copilot as a **declarative agent**. Its one action is
+the [Healthproximate MCP server](/api/mcp), and users sign in with their work
+account (Microsoft Entra ID). There is no API key to hand out and no store
+listing: Valiance sends your admin an app package (`val-copilot-agent.zip`),
+and your admin uploads it.
+
+## Before you start
+
+Valiance confirms that:
+
+- your Microsoft tenant has an active Microsoft SSO configuration in
+  Healthproximate (tenant id, allowed email domains, the organizations it covers);
+- the **MCP server** feature is on for those organizations;
+- each person who will use Val is an active Healthproximate member whose email
+  matches their work account (UPN).
+
+You need a **Global Administrator** (for consent) and a **Microsoft 365 admin**
+who may upload custom apps. Users need a Microsoft 365 Copilot license.
+Microsoft renames admin menus often; the names below are those of November 2026.
+
+## Install
+
+<Steps>
+  <Step title="Grant admin consent">
+    A Global Administrator opens this URL, signed in to your tenant, and accepts.
+    Valiance sends you the Val MCP client id.
+
+    ```
+    https://login.microsoftonline.com/YOUR_TENANT_ID/adminconsent?client_id=VAL_MCP_CLIENT_ID
+    ```
+
+    This lets Val receive your users' sign-in for Healthproximate only
+    (`access_as_user`). It grants no access to mail, files or other Microsoft 365 data.
+  </Step>
+  <Step title="Allow custom apps">
+    Only if your tenant blocks them: Teams admin center, then Teams apps, Manage
+    apps, Actions, Org-wide app settings, and turn Custom apps on.
+  </Step>
+  <Step title="Upload the agent package">
+    Microsoft 365 admin center, then Settings, Integrated apps, **Upload custom
+    apps**. Choose app type Teams app / Copilot agent and upload
+    `val-copilot-agent.zip`.
+  </Step>
+  <Step title="Assign it">
+    On the same page choose **Specific users/groups** (start with a pilot group),
+    accept the permissions, and **Deploy**. It can take a few hours to appear.
+  </Step>
+  <Step title="Use it">
+    A user opens [Microsoft 365 Copilot chat](https://m365.cloud.microsoft/chat),
+    picks **Val** under Agents, and asks a question. On the first call Copilot
+    shows **Sign in to Val**; the user signs in with their work account once.
+  </Step>
+</Steps>
+
+To update, upload the new zip on the app's page in Integrated apps. To remove,
+go to Integrated apps, Val, Remove. Valiance can also switch the MCP server off
+for your organization, which stops every call at once.
+
+## Web search is off, on purpose
+
+The agent declares **no Copilot capabilities**: no web search, and no OneDrive,
+SharePoint, email or Teams content. Web search grounds answers in Bing, and Bing
+is outside Microsoft's BAA, so a prompt that carries patient data would leave
+for Bing. The other capabilities would mix tenant content into answers about
+Healthproximate data. The agent's only source is the Healthproximate MCP server,
+and it is told not to answer from the model's general knowledge. Do not add
+capabilities to the package; Valiance's build refuses a package that has any.
+
+## BAA and redaction
+
+Copilot sees what the MCP server sends, after the server's PHI layer. By
+default every result is **redacted**: names, IC numbers, phone numbers, dates
+and long digit runs reach Copilot as placeholders such as `[DATE]` and
+`[NUMBER]`. Results are unredacted for Copilot only after an admin of your
+Healthproximate organization attests that your organization holds a BAA with
+Microsoft covering Microsoft 365 Copilot. See
+[MCP security](/api/mcp-security#attestation).
+
+## Tools
+
+Copilot discovers the tools at run time, so Val sees exactly what the server
+offers your organization: the tools listed on the [MCP server](/api/mcp#tools)
+page. Microsoft screens each new or changed tool before users see it, and the
+admin center marks Val as an agent whose tools can change.
+
+## Troubleshooting
+
+| Symptom | Cause |
+| --- | --- |
+| "Sign in to Val" loops, or the consent pop-up errors | Admin consent (step 1) was not granted in your tenant |
+| Val says it cannot reach Healthproximate | Your tenant has no active Microsoft SSO configuration in Healthproximate, or the user is not an active member at an allowed email domain. Ask Valiance |
+| Val says the feature is not enabled | The MCP server feature is off for your organization |
+| Val is missing for a user | Not in the assigned group, no Copilot license, or deployment still propagating |
