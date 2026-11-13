@@ -66,6 +66,11 @@ from your own organization's claims.
     organizations in that insurer's own claims for it. Skip this step with a pooled key:
     it answers 403 `payor_bound_key_required`.
 
+    To protect other insurers' rates, an entry is listed only when its claims come from
+    at least 3 insurers and number at least 15, or when every claim at it is your
+    insurer's own. So the list can be shorter than the set of providers, surgeons and
+    clients you see in your own claims.
+
     ```bash
     curl "https://api.v2.healthproximate.com/api/v1/predict/price/options/?domain=procedure&concept_id=3f0c2a4e-7b1d-4c6a-9e2f-5a8b7c6d1e0f" \
       -H "X-API-Key: hpx_..."
