@@ -3,7 +3,7 @@ title: "Drug coding"
 description: "Map drug names — brands, generics, local formulations — to RxNorm concepts."
 ---
 
-Drug coding runs through [`POST /api/v1/search/`](/api-reference) with `domain: "Drug"`.
+Drug coding runs through [`POST /api/v1/search/`](/api-reference) with `domain_id: "Drug"`.
 
 | Vocabulary | Parameter value | Status |
 | --- | --- | --- |
@@ -17,9 +17,9 @@ curl https://api.v2.healthproximate.com/api/v1/search/ \
   -H "Content-Type: application/json" \
   -d '{
     "query": "augmentin 625mg",
-    "domain": "Drug",
-    "vocabulary": "RxNorm",
-    "limit": 5
+    "domain_id": "Drug",
+    "vocabularies": ["RxNorm"],
+    "top_k": 5
   }'
 ```
 

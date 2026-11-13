@@ -82,18 +82,18 @@ description: "Common questions about Healthproximate — what it does, which wor
 
 <AccordionGroup>
   <Accordion title="How do I get an API key?">
-    Contact the team at [admin@valiancehealth.ai](mailto:admin@valiancehealth.ai) with
-    your organization details to request credentials. See the
-    [API Overview](/api/overview).
+    If your account has API access, create one under **Settings → API → Keys**.
+    Otherwise, contact the team at [admin@valiancehealth.ai](mailto:admin@valiancehealth.ai)
+    with your organization details. See [Authentication](/api/authentication).
   </Accordion>
   <Accordion title="Where is the full API reference?">
-    The public [API Overview](/api/overview) covers the high-level model. Detailed and
-    restricted implementation references are available only through controlled access
-    channels to approved customers and partners.
+    In the **API Reference** tab, starting at [Introduction](/api/introduction). It
+    documents every endpoint a customer key can call. Internal and administrative
+    endpoints are not published.
   </Accordion>
   <Accordion title="Can I rotate my API key?">
-    Yes. Contact support to rotate a key; the previous key typically remains valid for
-    a short transition period.
+    Yes. Create a new key under **Settings → API → Keys**, move your traffic to it,
+    then revoke the old one. Revocation takes effect on the next request.
   </Accordion>
 </AccordionGroup>
 

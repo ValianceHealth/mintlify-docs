@@ -98,6 +98,7 @@
             "pages": [
               "api/introduction",
               "api/authentication",
+              "api/sandbox-keys",
               "api/errors-and-limits",
               "api/redaction-receipts"
             ]
@@ -160,6 +161,16 @@
               "POST /api/v1/fhir/$classify-drg",
               "POST /api/v1/fhir/$autocode",
               "GET /api/v1/fhir/autocode-jobs/{job_id}"
+            ]
+          },
+          {
+            "group": "MCP",
+            "openapi": "api/openapi-commercial.yaml",
+            "pages": [
+              "api/mcp",
+              "api/m365-copilot",
+              "api/mcp-security",
+              "POST /api/v1/mcp/"
             ]
           }
         ]
