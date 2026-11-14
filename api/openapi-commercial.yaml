@@ -2303,11 +2303,10 @@ paths:
         `tools/list`, `tools/call`. Legacy clients (`2025-11-25` and earlier) open with `initialize`.
         A version the server does not speak is a 400 with JSON-RPC error `-32022` listing `supported`
         and `requested`. No SSE and no session; GET is 405. A present `Origin` that is not ours is a 403
-        `origin_not_allowed`. Needs an MCP sign-in token (OAuth, when enabled: the 401''s `WWW-Authenticate`
-        names the `resource_metadata` to start from), an API key with the `mcp` scope, or an Entra ID
-        access token with the `access_as_user` scope from a tenant set up for SSO (401 with a `code` otherwise),
-        on an organization with the `mcp_server` flag (403 `feature_not_enabled` otherwise). A notification
-        (no `id`) is answered 202. Each key, or each Entra user per tenant, may make 60 calls a minute.'
+        `origin_not_allowed`. Needs an API key with the `mcp` scope, or an Entra ID access token with
+        the `access_as_user` scope from a tenant set up for SSO (401 with a `code` otherwise), on an organization
+        with the `mcp_server` flag (403 `feature_not_enabled` otherwise). A notification (no `id`) is
+        answered 202. Each key, or each Entra user per tenant, may make 60 calls a minute.'
       summary: MCP server (Streamable HTTP, stateless JSON mode)
       tags:
       - MCP
@@ -2356,8 +2355,6 @@ paths:
                       gender: M
                 summary: tools/call
       security:
-      - mcp_oauth:
-        - mcp
       - entra_bearer_auth: []
       - api_key_auth: []
       - jwt_auth: []
@@ -2473,9 +2470,8 @@ paths:
                     type: string
                   code:
                     type: string
-          description: 'No credential, an MCP sign-in token refused (`code`: invalid_token), or an Entra
-            token refused (`code`: invalid_token, expired, bad_audience, bad_issuer, missing_scope, wrong_tenant,
-            no_matching_user).'
+          description: 'No credential, or an Entra token refused (`code`: invalid_token, expired, bad_audience,
+            bad_issuer, missing_scope, wrong_tenant, no_matching_user).'
         '403':
           content:
             application/json:
@@ -6808,18 +6804,6 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: JWT access token obtained from /login/ endpoint
-    mcp_oauth:
-      type: oauth2
-      description: 'MCP sign-in (VAL-1722): authorization code with S256 PKCE and an RFC 8707 `resource`
-        naming the MCP endpoint. Clients discover it from the 401''s `WWW-Authenticate` and register with
-        a Client ID Metadata Document or RFC 7591. The token works on the MCP endpoint only.'
-      flows:
-        authorizationCode:
-          authorizationUrl: /oauth/authorize/
-          tokenUrl: /oauth/token/
-          refreshUrl: /oauth/token/
-          scopes:
-            mcp: Read case data through the MCP server
 tags:
 - name: DRG
   description: MS-DRG classification from coded input, free clinical text, or FHIR.
