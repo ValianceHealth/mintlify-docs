@@ -20,10 +20,16 @@ steps, in this order, whatever the tool and whatever the outcome: **redact**,
   `access_as_user` scope, from a tenant set up for Healthproximate SSO. The call
   acts as the signed-in person, who must be an active member. This is how
   [Microsoft 365 Copilot](/api/m365-copilot) connects.
+- **A sign-in token** (OAuth, available on request: ask your Valiance contact).
+  The client opens the Healthproximate sign-in page, the person picks one
+  organization to connect, and the client receives a token that expires after an
+  hour, works on the MCP server only, and stops working when the person leaves
+  the organization or is deactivated. No key is pasted into a config file.
 
-Either way, the organization must have the **MCP server** feature on
+Whichever you use, the organization must have the **MCP server** feature on
 (`403 feature_not_enabled` otherwise). A call acts for exactly one organization:
-the key's own, or one the person belongs to inside the tenant's coverage. No tool
+the key's own, the one the person connected at sign-in, or one the person
+belongs to inside the tenant's coverage. No tool
 argument can name another organization, and every tool is read-only.
 
 ## Redaction
@@ -55,7 +61,8 @@ redacted**. The size cap and the audit record stay.
 | OpenAI (ChatGPT, Codex) | An API-key client whose `clientInfo.name` starts with `codex`, `openai` or `chatgpt`, ignoring case |
 
 Any other client, Cursor included, is **always redacted**: there is no
-attestation for it.
+attestation for it. A client connected with a sign-in token is always redacted
+too, for now: an attestation does not yet cover sign-in clients.
 
 An API-key client is recognised by the name it sends in `initialize` (or, on a `2026-07-28` request, in `params._meta`), which is
 the client's own claim. An attestation therefore trusts your key holders to
@@ -76,7 +83,8 @@ the assistant to narrow the question (one case, a shorter window, fewer codes).
 
 ## Rate limits
 
-**60 calls a minute** per API key, or per Entra user per tenant, counted apart
+**60 calls a minute** per API key, per Entra user per tenant, or per signed-in
+person per client, counted apart
 from the key's other `/api/v1/` budgets. Over that, the server answers HTTP `429`.
 
 ## Audit
@@ -84,7 +92,8 @@ from the key's other `/api/v1/` budgets. Over that, the server answers HTTP `429
 Each `tools/call` writes one audit record:
 
 - the organization;
-- whether the caller was an API key or an Entra user, and a hash of which one;
+- whether the caller was an API key, an Entra user or a signed-in person, and a
+  hash of which one;
 - the client's name (`clientInfo.name`, from `initialize` or each `2026-07-28` request's `_meta`);
 - the tool and a hash of the case id it asked about;
 - the outcome, the size of the result sent, and whether it was redacted or cut.
