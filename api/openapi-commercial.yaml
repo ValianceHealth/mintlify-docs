@@ -6810,9 +6810,9 @@ components:
       description: JWT access token obtained from /login/ endpoint
     mcp_oauth:
       type: oauth2
-      description: 'MCP sign-in (VAL-1722): authorization code with S256 PKCE and an RFC 8707 `resource`
-        naming the MCP endpoint. Clients discover it from the 401''s `WWW-Authenticate` and register with
-        a Client ID Metadata Document or RFC 7591. The token works on the MCP endpoint only.'
+      description: 'MCP sign-in: authorization code with S256 PKCE and an RFC 8707 `resource` naming the
+        MCP endpoint. Clients discover it from the 401''s `WWW-Authenticate` and register with a Client
+        ID Metadata Document or RFC 7591. The token works on the MCP endpoint only.'
       flows:
         authorizationCode:
           authorizationUrl: /oauth/authorize/
