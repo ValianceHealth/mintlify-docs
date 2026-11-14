@@ -5,8 +5,8 @@ description: "Every model an API key can call, where each one runs, and what the
 
 {/* The source of this page is docs/api/models.mdx in healthproximate.
     sync-commercial-docs.yml copies it here. Edit it there, not here.
-    ai/tests/test_residency_page.py failed that build if this table and the
-    model clearances disagreed, until #2028 deleted it; nothing checks it now. */}
+    tests/ai/test_model_catalogue_matches_clearances.py fails the build if this
+    table and the in-force model clearances disagree (restored under VAL-1557). */}
 
 An API key can call only the models on this page. Every other model id returns
 `400` with `code: "model_not_allowed"`. The list is the same for every
