@@ -6,7 +6,8 @@ description: "Connect Claude Code, Codex, Cursor or Microsoft 365 Copilot to Hea
 {/* The source of this page is docs/api/mcp.mdx in healthproximate.
     sync-commercial-docs.yml copies it here. Edit it there, not here.
     tests/mcp_server/test_mcp_docs.py fails the build when the tool table below
-    and the server's tool allowlist disagree. */}
+    and the server's non-catalog tools disagree. The API reads are not tabled: the
+    x-agent catalog decides them, and tools/list is their documentation. */}
 
 Healthproximate serves Val's read-only tools over the
 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) at one URL:
@@ -99,22 +100,38 @@ its tools listed.
 ## Tools
 
 Every tool reads; none writes. Each call acts for your key's own organization,
-and no argument can name another. `tools/list` returns the exact input schema of
-each tool your organization is given; the table summarises it. Required inputs
-are marked **required**.
+and no argument can name another.
+
+Almost every tool is one read of the Healthproximate API, and the set grows as
+Healthproximate opens more of the API to agents: case cohorts and predictions,
+analytics and KPI figures, supply usage and pricing, revenue simulation, OMOP
+vocabulary lookups, MS-DRG grouping and PROM results. **`tools/list` is the
+authority**: it returns each tool your organization is given, with its
+description and exact input schema. Most tools belong to a module (Val AI for
+`get_case_details`). Such a tool is listed only when your organization has that
+module and you have been given it. The platform tools (MS-DRG grouping, OMOP
+lookups and procedure search) need no module when you sign in as a person. An
+API key needs your organization's API module for every tool, and reaches only
+the modules the key names. Such a tool takes the API's path and query
+parameters as arguments and its JSON request body as `body`, and answers
+`{status, body}`, where `body` is the API's own response and a `status` of `400`
+or more is the API's error, whose body names what to fix. For example,
+`v1_drg_classify_create` takes
+`{"body": {"dx_codes": ["I21.09"], "gender": "M"}}` and answers with the MS-DRG.
+
+The tools that are not an API read are:
 
 | Tool | What it answers | Inputs |
 | --- | --- | --- |
 | `get_case_details` | One case's clinical and financial summary: age, length of stay, procedure, diagnosis, key financial figures, and its coding (DRG, ICD-10-CM diagnoses, procedure codes). | `case_id` **required** (case UUID or hospital case number); `metric`: `cost`, `revenue`, `profit` or `margin` |
-| `get_cohort_availability` | How much case history your organization has for a procedure, per age band and per gender, with a confidence tier. Counts only, no patient data. | `procedure_id` **required** (a Healthproximate procedure UUID; the MCP server has no tool to look one up yet, so you supply it); `metric`: `price`, `cost` or `time` (default `price`) |
-| `classify_drg` | ICD-10-CM diagnosis and ICD-10-PCS procedure codes in, one MS-DRG out, with its description, MDC and type. | `dx_codes` **required** (array; the first is the principal diagnosis); `pr_codes` (array); `gender`: `F` or `M`; `is_alive` (boolean); `discharge_status` (UB-04 code, such as `07`); `version`: `v35` to `v44` (default `v40`) |
-| `find_codes` | Free clinical text coded into one vocabulary's codes. | `query` **required**; `target_vocabulary` **required**: `ICD10CM`, `ICD10PCS`, `CPT4`, `RxNorm` or `SNOMED`; `domain` (an OMOP domain, such as `Procedure`); `top_k` (default 10, at most 25) |
-| `prom_summary` | Patient-reported outcome (PROM) response rates and mean scores per procedure, cohort or form. Offered only where PROMs are enabled for your organization. | `instrument` (such as `eq5d5l`; omit for all); `wave_day` (days from the procedure, such as `90`); `group_by`: `procedure`, `cohort` or `form`; `sent_from`, `sent_to` (`YYYY-MM-DD`) |
 
 A tool's own failure (a case or procedure not found in your organization, or
 invalid arguments) is a normal result with `isError: true` and a fixed message.
-A tool name that is not listed for your organization is the JSON-RPC error
-`-32602` `Unknown tool`.
+A call to a tool that is not listed for you is the JSON-RPC error `-32602`
+`Unknown tool`. Each call is checked again, so a tool whose module you lost
+after you listed the tools gets the same error. When that check cannot run (a
+brief outage), the call is the JSON-RPC error `-32603`
+`Access could not be checked. Try again.`: retry it.
 
 Results are redacted and capped at 50 KB before they reach your client. See
 [MCP security](/api/mcp-security).
@@ -136,3 +153,4 @@ other `/api/v1/` budgets.
 | HTTP `400`, JSON-RPC `-32600` | The body is not one JSON-RPC request (a batch is refused) |
 | HTTP `200`, JSON-RPC `-32601` | A method other than `initialize`, `server/discover`, `ping`, `tools/list` and `tools/call` (on a `2026-07-28` request: HTTP `404`) |
 | HTTP `200`, JSON-RPC `-32602` | Invalid params, or a tool not listed for your organization |
+| HTTP `200`, JSON-RPC `-32603` | `Access could not be checked. Try again.`: the module check could not run. Retry the call |

@@ -58,11 +58,20 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: '`view_as` names an organization the caller may not act as'
+          description: '`view_as` names an organization the caller may not act as
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '500':
           description: Internal server error
         '503':
-          description: 'De-identification failed — request refused before any model (`code`: `deidentification_failed_closed`)'
+          description: 'De-identification failed — request refused before any model (`code`: `deidentification_failed_closed`)
+
+
+            `module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/drg/batch/:
     post:
       operationId: v1_drg_batch_create
@@ -116,9 +125,17 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: '`view_as` names an organization the caller may not act as'
+          description: '`view_as` names an organization the caller may not act as
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           description: Batch rate limit, monthly limit, or spend cap reached
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/drg/batch/{job_id}/:
     get:
       operationId: v1_drg_batch_retrieve
@@ -147,9 +164,17 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: '`view_as` names an organization the caller may not act as'
+          description: '`view_as` names an organization the caller may not act as
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '404':
           description: No such job in your organization
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/drg/classify/:
     post:
       operationId: v1_drg_classify_create
@@ -208,9 +233,17 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: '`view_as` names an organization the caller may not act as'
+          description: '`view_as` names an organization the caller may not act as
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '500':
           description: Internal server error
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/fhir/$autocode:
     post:
       operationId: v1_fhir_autocode
@@ -516,7 +549,13 @@ paths:
                       diagnostics: $autocode is not enabled for this organization
           description: 'OperationOutcome: `view_as` names an organization the caller may not act as (checked
             first), not an API key, an internal or superuser key, a missing `vocabulary` scope, or `fhir_autocode`
-            is off for the organization'
+            is off for the organization
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           content:
             application/fhir+json:
@@ -573,7 +612,10 @@ paths:
                       code: transient
                       diagnostics: auto-coding is temporarily unavailable
           description: 'OperationOutcome: Redaction failed, or the coder is unavailable. Retry later;
-            not billed'
+            not billed
+
+
+            `module_check_unavailable`: the module check could not run. Try again.'
         '202':
           content:
             application/fhir+json:
@@ -716,10 +758,18 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: The API key lacks the drg:classify scope, or `view_as` names an organization the
+          description: 'The API key lacks the drg:classify scope, or `view_as` names an organization the
             caller may not act as
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           description: Rate or monthly limit reached
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/fhir/CodeSystem/$lookup:
     get:
       operationId: v1_fhir_codesystem_lookup
@@ -898,9 +948,17 @@ paths:
         '401':
           description: No or invalid credentials
         '403':
-          description: The API key lacks the scope for this path
+          description: 'The API key lacks the scope for this path
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           description: Rate or monthly limit reached
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
     post:
       operationId: v1_fhir_codesystem_lookup_post
       description: 'Look up one code: its display name, the loaded version, its English
@@ -1066,9 +1124,17 @@ paths:
         '401':
           description: No or invalid credentials
         '403':
-          description: The API key lacks the scope for this path
+          description: 'The API key lacks the scope for this path
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           description: Rate or monthly limit reached
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/fhir/CodeSystem/$validate-code:
     get:
       operationId: v1_fhir_codesystem_validate_code
@@ -1203,9 +1269,17 @@ paths:
         '401':
           description: No or invalid credentials
         '403':
-          description: The API key lacks the scope for this path
+          description: 'The API key lacks the scope for this path
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           description: Rate or monthly limit reached
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
     post:
       operationId: v1_fhir_codesystem_validate_code_post
       description: 'Is this code valid? `result` is `false`, with a `message`, when the
@@ -1322,9 +1396,17 @@ paths:
         '401':
           description: No or invalid credentials
         '403':
-          description: The API key lacks the scope for this path
+          description: 'The API key lacks the scope for this path
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           description: Rate or monthly limit reached
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/fhir/ConceptMap/$translate:
     post:
       operationId: v1_fhir_conceptmap_translate
@@ -1460,9 +1542,17 @@ paths:
         '401':
           description: No or invalid credentials
         '403':
-          description: The API key lacks the scope for this path
+          description: 'The API key lacks the scope for this path
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           description: Rate or monthly limit reached
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/fhir/ValueSet/$expand:
     get:
       operationId: v1_fhir_valueset_expand
@@ -1608,9 +1698,17 @@ paths:
         '401':
           description: No or invalid credentials
         '403':
-          description: The API key lacks the scope for this path
+          description: 'The API key lacks the scope for this path
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           description: Rate or monthly limit reached
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
     post:
       operationId: v1_fhir_valueset_expand_post
       description: 'Search one code system by text and get ranked codes back. `url` is
@@ -1738,9 +1836,17 @@ paths:
         '401':
           description: No or invalid credentials
         '403':
-          description: The API key lacks the scope for this path
+          description: 'The API key lacks the scope for this path
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           description: Rate or monthly limit reached
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/fhir/autocode-jobs/{job_id}:
     get:
       operationId: v1_fhir_autocode_status
@@ -1945,7 +2051,13 @@ paths:
                       code: forbidden
                       diagnostics: an API key is required for $autocode
           description: 'OperationOutcome: `view_as` names an organization the caller may not act as (checked
-            first), or not an API key'
+            first), or not an API key
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '404':
           content:
             application/fhir+json:
@@ -2026,7 +2138,10 @@ paths:
                     - severity: error
                       code: transient
                       diagnostics: auto-coding is temporarily unavailable
-          description: 'OperationOutcome: The run failed'
+          description: 'OperationOutcome: The run failed
+
+
+            `module_check_unavailable`: the module check could not run. Try again.'
         '202':
           content:
             application/fhir+json:
@@ -2170,10 +2285,18 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: The API key lacks the drg:classify scope, or `view_as` names an organization the
+          description: 'The API key lacks the drg:classify scope, or `view_as` names an organization the
             caller may not act as
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           description: Rate or monthly limit reached
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/fhir/metadata:
     get:
       operationId: v1_fhir_metadata
@@ -2206,6 +2329,13 @@ paths:
                 type: object
                 additionalProperties: {}
           description: FHIR R4 resource (application/fhir+json)
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/llm/chat/completions:
     post:
       operationId: v1_llm_chat_completions_create
@@ -2265,7 +2395,13 @@ paths:
             wallet''s own minor units.'
         '403':
           description: '`permission_error`: a user login (`api_key_required`), or a `view_as` naming an
-            organization the key may not act as (`permission_denied`)'
+            organization the key may not act as (`permission_denied`)
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           description: Rate limit or spend limit reached
         '503':
@@ -2275,7 +2411,10 @@ paths:
             throttling: Azure AI Foundry''s quota, or Amazon Bedrock Converse''s throttling after its
             retries, and no failover answered) and `upstream_error` (the provider failed with a server
             error after its retries). `provider_unconfigured` is not one to retry: the model''s provider
-            is not configured on this deployment, or its credential could not be read. Contact support.'
+            is not configured on this deployment, or its credential could not be read. Contact support.
+
+
+            `module_check_unavailable`: the module check could not run. Try again.'
         '504':
           description: The model did not answer inside the budget for a non-streamed request. Retry, or
             send stream=true with redact_only=true.
@@ -2295,6 +2434,13 @@ paths:
           description: An OpenAI-shaped model list
         '401':
           description: Missing or invalid API key
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/mcp/:
     post:
       operationId: v1_mcp_create
@@ -2349,11 +2495,12 @@ paths:
                   id: 1
                   method: tools/call
                   params:
-                    name: classify_drg
+                    name: v1_drg_classify_create
                     arguments:
-                      dx_codes:
-                      - I21.09
-                      gender: M
+                      body:
+                        dx_codes:
+                        - I21.09
+                        gender: M
                 summary: tools/call
       security:
       - mcp_oauth:
@@ -2566,6 +2713,13 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/omop/resolve/:
     post:
       operationId: v1_omop_resolve_create
@@ -2620,6 +2774,13 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/omop/resolve/ancestors/:
     post:
       operationId: v1_omop_resolve_ancestors_create
@@ -2669,6 +2830,13 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/omop/resolve/descendants/:
     post:
       operationId: v1_omop_resolve_descendants_create
@@ -2718,6 +2886,13 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/omop/resolve/expand/:
     post:
       operationId: v1_omop_resolve_expand_create
@@ -2773,6 +2948,13 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/omop/resolve/map/:
     post:
       operationId: v1_omop_resolve_map_create
@@ -2822,6 +3004,13 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/omop/resolve/normalize/:
     post:
       operationId: v1_omop_resolve_normalize_create
@@ -2875,6 +3064,13 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/omop/resolve/relationships/:
     post:
       operationId: v1_omop_resolve_relationships_create
@@ -2925,6 +3121,13 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/omop/resolve/workflow/:
     post:
       operationId: v1_omop_resolve_workflow_create
@@ -2983,6 +3186,13 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/omop/translate/:
     post:
       operationId: v1_omop_translate_create
@@ -3051,6 +3261,13 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/predict/price/:
     post:
       operationId: v1_predict_price_create
@@ -3310,9 +3527,15 @@ paths:
                       lists for this concept.
                     code: entity_not_permitted
                   summary: Entity not in own claims
-          description: The key lacks the scope, the feature is not enabled, the caller has no organization,
-            `view_as` names another organization, `payor_id` is not the key's insurer, or a `provider_id`
-            / `surgeon_id` / `client_id` is not in the key's own claims for the concept
+          description: 'The key lacks the scope, the feature is not enabled, the caller has no organization,
+            `view_as` names another organization, `payor_id` is not the key''s insurer, or a `provider_id`
+            / `surgeon_id` / `client_id` is not in the key''s own claims for the concept
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '404':
           content:
             application/json:
@@ -3347,7 +3570,10 @@ paths:
                   value:
                     detail: The price model is unavailable. Try again later.
                     code: prediction_unavailable
-          description: The price model is unavailable; retry later
+          description: 'The price model is unavailable; retry later
+
+
+            `module_check_unavailable`: the module check could not run. Try again.'
         '429':
           content:
             application/json:
@@ -3499,8 +3725,14 @@ paths:
                     detail: This caller has no acting organization.
                     code: organization_required
                   summary: No organization
-          description: The key lacks the scope, the feature is not enabled, the caller has no organization,
+          description: 'The key lacks the scope, the feature is not enabled, the caller has no organization,
             or `view_as` names another organization
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           content:
             application/json:
@@ -3512,6 +3744,8 @@ paths:
                     detail: Request was throttled. Expected available in 30 seconds.
                     code: throttled
           description: Rate limit or monthly request limit reached
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/predict/price/options/:
     get:
       operationId: v1_predict_price_options_retrieve
@@ -3671,8 +3905,14 @@ paths:
                     detail: This caller has no acting organization.
                     code: organization_required
                   summary: No organization
-          description: Not a payor-bound key, the key lacks the scope, the feature is not enabled, the
+          description: 'Not a payor-bound key, the key lacks the scope, the feature is not enabled, the
             caller has no organization, or `view_as` names another organization
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '404':
           content:
             application/json:
@@ -3696,6 +3936,8 @@ paths:
                     detail: Request was throttled. Expected available in 30 seconds.
                     code: throttled
           description: Rate limit or monthly request limit reached
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/redact/:
     post:
       operationId: v1_redact_create
@@ -3766,11 +4008,20 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: '`view_as` names an organization the caller may not act as'
+          description: '`view_as` names an organization the caller may not act as
+
+
+            `module_not_available`: a module this route needs is not available to the caller in the acting
+            organization(s) (the organization has no contract, or the person no grant). The body names
+            `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in the OpenAI error
+            shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
         '429':
           description: Rate limit exceeded
         '503':
-          description: 'Redaction failed — request refused (`code`: `redaction_failed_closed`)'
+          description: 'Redaction failed — request refused (`code`: `redaction_failed_closed`)
+
+
+            `module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/search/:
     post:
       operationId: v1_search_create
@@ -3904,7 +4155,15 @@ paths:
           description: Internal server error during search
         '503':
           description: 'The search model could not be loaded. Retry after the `Retry-After` seconds; the
-            body is `{"detail": ...}` with fixed text.'
+            body is `{"detail": ...}` with fixed text.
+
+
+            `module_check_unavailable`: the module check could not run. Try again.'
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
   /api/v1/search/batch/:
     post:
       operationId: v1_search_batch_create
@@ -3989,7 +4248,15 @@ paths:
           description: Internal server error during search
         '503':
           description: 'The search model could not be loaded. Retry after the `Retry-After` seconds; the
-            body is `{"detail": ...}` with fixed text.'
+            body is `{"detail": ...}` with fixed text.
+
+
+            `module_check_unavailable`: the module check could not run. Try again.'
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
   /api/v1/search/domains/:
     get:
       operationId: v1_search_domains_retrieve
@@ -4025,6 +4292,13 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/search/vocabularies/:
     get:
       operationId: v1_search_vocabularies_retrieve
@@ -4061,6 +4335,13 @@ paths:
         '401':
           description: Invalid or missing authentication. Provide either Authorization header (Bearer
             token) or X-API-Key header.
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/usage/history/:
     get:
       operationId: user_api_usage_history
@@ -4116,6 +4397,13 @@ paths:
             or `page` or `page_size` is present but is not an integer of 1 or more, as `{field: [message]}`
             naming the field. A malformed date used to be ignored; a malformed or zero page or page size
             used to be silently replaced by the default. An absent or empty value is the default.'
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/usage/history/{log_id}/:
     get:
       operationId: user_api_usage_detail
@@ -4143,6 +4431,13 @@ paths:
           description: ''
         '404':
           description: Not found
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
   /api/v1/usage/summary/:
     get:
       operationId: user_api_usage_summary
@@ -4187,6 +4482,13 @@ paths:
             `{"start_date": ["Enter a valid ISO 8601 date or datetime, ..."]}`. A malformed date used
             to be ignored and the answer covered every date; a malformed id or limit used to be a 500.
             An absent or empty filter is the default, not an error.'
+        '403':
+          description: '`module_not_available`: a module this route needs is not available to the caller
+            in the acting organization(s) (the organization has no contract, or the person no grant).
+            The body names `module`, `module_label` and `organization_ids`; `/api/v1/llm/` answers in
+            the OpenAI error shape and `/api/v1/fhir/` as an OperationOutcome, with the same code.'
+        '503':
+          description: '`module_check_unavailable`: the module check could not run. Try again.'
 components:
   schemas:
     AncestorConcept:
