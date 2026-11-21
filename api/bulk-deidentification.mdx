@@ -268,8 +268,6 @@ The endpoint fails closed: it never returns your text unprocessed.
 
 ## Before you rely on it
 
-- **Check a sample.** No automated de-identification catches every identifier. Run 50 to
-  100 notes first and read the output.
 - **Handle structured columns.** The script doesn't touch IDs, dates of birth, addresses or any other column outside the text column. Drop or replace them.
 - **Keep the counts.** The per-row `deid_entities` counts record that de-identification ran and
   what it found.
