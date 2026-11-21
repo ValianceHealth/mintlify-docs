@@ -1,0 +1,275 @@
+---
+title: "De-identify notes in bulk"
+description: "Run a file of clinical notes through the redaction endpoint, one note per call, with consistent placeholders per patient."
+---
+
+Use `POST /api/v1/redact/` to de-identify clinical notes (case notes, progress notes,
+discharge summaries) before you analyse or share them. This page covers a whole file. For
+a single call, see the endpoint reference under **Gateway**.
+
+## How it works
+
+- **One note per call.** You send the text of one note and get the de-identified text
+  back, usually in well under a second. There is no file upload and no job to poll. To
+  process a file, you loop over its rows. The script below does that for a CSV.
+- **What is replaced.** Patient names, Malaysian IC (MyKad) numbers, MRNs, passport
+  numbers, phone numbers, email addresses, and card or account numbers. Each becomes an
+  indexed placeholder such as `[PERSON_1]` or `[MY_IC_1]`.
+- **What is kept.** Clinical content stays as written: ages, dates and relative dates
+  ("day 3 post-op"), vitals, drug names and doses. See
+  [Redaction receipts](/api/redaction-receipts) for why.
+- **The mapping.** Each response includes the mapping from placeholder to original value.
+  We never store it. If you discard it, the text is permanently de-identified. Keep it only
+  if you need to re-identify later, and then treat it as patient data.
+
+<Note>
+  Calling this endpoint sends the identified note to Healthproximate for processing. The
+  text is processed in memory and not stored, and request bodies are not logged.
+</Note>
+
+## One call
+
+```bash
+curl -s https://api.v2.healthproximate.com/api/v1/redact/ \
+  -H "X-API-Key: $HPX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Ali bin Ahmad, IC 880101-14-5501, 72yo day 3 post-op, 500 mg PO amoxicillin"}'
+```
+
+```json
+{
+  "redacted_text": "[PERSON_1], IC [MY_IC_1], 72yo day 3 post-op, 500 mg PO amoxicillin",
+  "mapping": {"[PERSON_1]": "Ali bin Ahmad", "[MY_IC_1]": "880101-14-5501"},
+  "entities_redacted": {"PERSON": 1, "MY_IC": 1},
+  "redaction_receipt": {"...": "..."}
+}
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `text` | yes | The note, up to 100,000 characters. |
+| `prior_mapping` | no | The `mapping` an earlier call returned. Values already in it keep their placeholder, and new values get the next free number. Use it to keep one patient's placeholders the same across their notes. |
+| `return_mapping` | no | Defaults to `true`. Send `false` only if you never re-identify and do not need consistent placeholders across notes. |
+
+## A whole file
+
+The script reads a CSV, de-identifies one text column, and writes a new CSV. It needs
+Python 3.10 or later and nothing else.
+
+```bash
+export HPX_API_KEY=hpx_...   # an environment variable, never a command-line argument
+python hpx_redact_csv.py notes.csv notes_deid.csv \
+    --text-col note_text \
+    --group-col patient_id \
+    --drop-cols patient_name,ic_number
+```
+
+| Option | Meaning |
+|---|---|
+| `--text-col` | The column holding the note text. Required. |
+| `--group-col` | The column that identifies the patient. Notes that share a value keep the same placeholders. The script does this by sending back the returned `mapping`, which it holds in memory only. |
+| `--drop-cols` | Columns to leave out of the output. **Only the text column is de-identified.** Structured columns such as names or IC numbers pass through unchanged unless you drop them. |
+| `--per-minute` | Calls per minute. The default is 100; a key allows 120. |
+| `--resume` | Continue an interrupted run. Rows already in the output are skipped. |
+
+The output keeps the input's columns (minus `--drop-cols`), with the text replaced, plus two new columns:
+
+- `deid_status`: `ok`, or `failed:<reason>`. **A failed row's text cell is empty.** The
+  script never writes an original note to the output.
+- `deid_entities`: counts per identifier type, for example `{"MY_IC": 1, "PERSON": 2}`.
+
+At 100 calls a minute, 10,000 notes take about 1 hour 40 minutes.
+
+<Accordion title="hpx_redact_csv.py">
+
+```python hpx_redact_csv.py
+#!/usr/bin/env python3
+"""De-identify a column of free text in a CSV with the Healthproximate redaction API.
+
+    export HPX_API_KEY=hpx_...
+    python hpx_redact_csv.py notes.csv notes_deid.csv --text-col note_text --group-col patient_id
+
+Reads the CSV row by row, sends each row's text to POST /api/v1/redact/, and
+writes the same row with the text replaced by its de-identified version, plus
+two columns: `deid_status` (ok / failed:<reason>) and `deid_entities` (counts
+per identifier type, never values).
+
+The placeholder -> original mapping the API returns is held in memory only, per
+--group-col value, so one patient keeps the same placeholder across notes. It is
+never written to disk or printed, and it is gone when the script exits: the
+output cannot be re-identified from anything this script leaves behind.
+
+Python 3.10+, standard library only.
+"""
+
+import argparse
+import csv
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.request
+
+DEFAULT_BASE_URL = "https://api.v2.healthproximate.com"
+MAX_TEXT_CHARS = 100_000  # the API's per-call limit
+RETRIES = 5
+
+
+class StopRun(Exception):
+    """An error no later row can recover from (bad key, missing scope)."""
+
+    def __init__(self, status):
+        super().__init__(status)
+        self.status = status
+
+
+def redact(base_url, api_key, text, prior_mapping, timeout):
+    """One API call. Returns (redacted_text, mapping, entities) or raises."""
+    body = {"text": text}
+    if prior_mapping:
+        body["prior_mapping"] = prior_mapping
+    req = urllib.request.Request(
+        base_url.rstrip("/") + "/api/v1/redact/",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"X-API-Key": api_key, "Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        out = json.loads(resp.read().decode("utf-8"))
+    return (
+        out["redacted_text"],
+        out.get("mapping") or {},
+        out.get("entities_redacted") or {},
+    )
+
+
+def redact_with_retries(base_url, api_key, text, prior_mapping, timeout):
+    """Returns (redacted_text, mapping, entities, status)."""
+    delay, failures = 2.0, 0
+    while True:
+        try:
+            return (*redact(base_url, api_key, text, prior_mapping, timeout), "ok")
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403):
+                raise StopRun(e.code) from None
+            if e.code == 400:
+                return "", prior_mapping, {}, "failed:invalid_request"
+            if e.code == 429:  # the rate or the monthly quota, not this row: wait
+                wait = float(e.headers.get("Retry-After") or 60)
+                print(f"  rate limited; waiting {wait:.0f}s", file=sys.stderr)
+                time.sleep(wait)
+                continue
+            reason = "redaction_failed_closed" if e.code == 503 else f"http_{e.code}"
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            reason = "network"
+        failures += 1
+        if failures >= RETRIES:
+            return "", prior_mapping, {}, f"failed:{reason}"
+        time.sleep(delay)
+        delay *= 2
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("input", help="CSV to read")
+    ap.add_argument("output", help="CSV to write (de-identified)")
+    ap.add_argument("--text-col", required=True, help="column holding the free text to de-identify")
+    ap.add_argument("--group-col", help="column that identifies the patient; notes sharing it keep the same placeholders")
+    ap.add_argument("--drop-cols", default="", help="comma-separated columns to leave out of the output (e.g. names, IC numbers)")
+    ap.add_argument("--base-url", default=os.environ.get("HPX_BASE_URL", DEFAULT_BASE_URL))
+    ap.add_argument("--per-minute", type=int, default=100, help="calls per minute (your key allows 120)")
+    ap.add_argument("--timeout", type=float, default=60.0, help="seconds per call")
+    ap.add_argument("--resume", action="store_true", help="append to an existing output, skipping rows already written")
+    args = ap.parse_args()
+
+    api_key = os.environ.get("HPX_API_KEY", "")
+    if not api_key.startswith("hpx_"):
+        sys.exit("Set HPX_API_KEY to your hpx_... key (as an environment variable, not an argument).")
+
+    csv.field_size_limit(min(sys.maxsize, 2**31 - 1))  # long notes exceed the 128 KB default
+    drop = {c.strip() for c in args.drop_cols.split(",") if c.strip()}
+
+    done = 0
+    if args.resume and os.path.exists(args.output):
+        with open(args.output, newline="", encoding="utf-8") as f:
+            done = max(sum(1 for _ in csv.reader(f)) - 1, 0)  # minus the header
+        print(f"resuming after {done} rows; placeholders restart for patients seen before the interruption", file=sys.stderr)
+
+    mappings = {}  # group value -> mapping; memory only
+    counts = {"ok": 0, "failed": 0}
+    interval = 60.0 / max(args.per_minute, 1)
+    last_call = 0.0
+
+    with (
+        open(args.input, newline="", encoding="utf-8-sig") as fin,
+        open(args.output, "a" if done else "w", newline="", encoding="utf-8") as fout,
+    ):
+        reader = csv.DictReader(fin)
+        for col in [args.text_col] + ([args.group_col] if args.group_col else []):
+            if col not in (reader.fieldnames or []):
+                sys.exit(f"column {col!r} not in the input; columns are: {reader.fieldnames}")
+        fields = [c for c in reader.fieldnames if c not in drop] + ["deid_status", "deid_entities"]
+        writer = csv.DictWriter(fout, fieldnames=fields, extrasaction="ignore")
+        if not done:
+            writer.writeheader()
+
+        for n, row in enumerate(reader, start=1):
+            if n <= done:
+                continue
+            text = row.get(args.text_col) or ""
+            group = row.get(args.group_col) if args.group_col else None
+            if not text.strip():
+                status, redacted, entities = "ok", text, {}
+            elif len(text) > MAX_TEXT_CHARS:
+                status, redacted, entities = "failed:too_long", "", {}
+            else:
+                wait = interval - (time.monotonic() - last_call)
+                if wait > 0:
+                    time.sleep(wait)
+                last_call = time.monotonic()
+                prior = mappings.get(group) if group else None
+                redacted, mapping, entities, status = redact_with_retries(args.base_url, api_key, text, prior, args.timeout)
+                if group and status == "ok":
+                    mappings[group] = mapping
+            row[args.text_col] = redacted
+            row["deid_status"] = status
+            row["deid_entities"] = json.dumps(entities, sort_keys=True)
+            writer.writerow(row)
+            counts["ok" if status == "ok" else "failed"] += 1
+            if n % 100 == 0:
+                fout.flush()
+                print(f"  {n} rows ({counts['ok']} ok, {counts['failed']} failed)", file=sys.stderr)
+
+    print(f"done: {counts['ok']} ok, {counts['failed']} failed -> {args.output}", file=sys.stderr)
+    if counts["failed"]:
+        print("failed rows have an EMPTY text cell; rerun just those rows if needed", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except StopRun as e:
+        sys.exit(f"HTTP {e.status}: check the API key and that it has the `redact` scope")
+```
+
+</Accordion>
+
+## Errors
+
+| Status | Meaning | What the script does |
+|---|---|---|
+| 400 | Invalid request, for example a note over 100,000 characters | Marks the row failed |
+| 401 / 403 | The key is wrong or expired, it lacks the `redact` scope, or your organization does not have API access (`code: module_not_available`) | Stops at once |
+| 429 | Over the per-minute rate or your plan's monthly allowance | Waits for `Retry-After`, then retries the same row |
+| 503 + `redaction_failed_closed` | De-identification could not complete, so the request was refused and **no text was returned** | Retries with backoff, then marks the row failed |
+
+The endpoint fails closed: it never returns your text unprocessed.
+
+## Before you rely on it
+
+- **Check a sample.** No automated de-identification catches every identifier. Run 50 to
+  100 notes first and read the output.
+- **Handle structured columns.** The script doesn't touch IDs, dates of birth, addresses or any other column outside the text column. Drop or replace them.
+- **Keep the counts.** The per-row `deid_entities` counts record that de-identification ran and
+  what it found.

@@ -109,6 +109,7 @@
             "pages": [
               "api/models",
               "api/tool-calling",
+              "api/bulk-deidentification",
               "POST /api/v1/llm/chat/completions",
               "POST /api/v1/redact/"
             ]
