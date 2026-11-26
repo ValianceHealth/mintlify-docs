@@ -179,9 +179,10 @@ paths:
     post:
       operationId: v1_drg_classify_create
       description: "\nClassify ICD-10-CM diagnosis codes and ICD-10-PCS procedure codes into an MS-DRG\
-        \ code\nusing the vhdrg classification engine.\n\n**No LLM cost** — this endpoint uses deterministic\
-        \ rule-based classification.\n\nSupported MS-DRG versions: v36 (FY2019) through v40 (FY2023),\
-        \ and v43 (FY2026).\nCMS grouper data for v41/v42 is not shipped by the vhdrg engine.\n    "
+        \ code\nwith the CMS MS-DRG grouper (msdrg).\n\n**No LLM cost** — this endpoint uses deterministic\
+        \ rule-based classification.\n\nSupported MS-DRG versions: v40 (FY 2023) through v44 (FY 2027).\
+        \ Omit `version`\nto group on your organization's configured version, or v40 when none is set.\n\
+        The response's `version` names the one used.\n    "
       summary: Classify ICD-10 codes into MS-DRG
       tags:
       - DRG
@@ -2495,7 +2496,7 @@ paths:
                   id: 1
                   method: tools/call
                   params:
-                    name: v1_drg_classify_create
+                    name: global_drg_classify
                     arguments:
                       body:
                         dx_codes:
@@ -5005,16 +5006,6 @@ components:
           description: 'Optional MS-DRG version hint for the agent
 
 
-            * `v35` - v35
-
-            * `v36` - v36
-
-            * `v37` - v37
-
-            * `v38` - v38
-
-            * `v39` - v39
-
             * `v40` - v40
 
             * `v41` - v41
@@ -5138,19 +5129,9 @@ components:
         version:
           allOf:
           - $ref: '#/components/schemas/VersionEnum'
-          default: v40
-          description: 'MS-DRG version (default: v40, FY 2023)
+          description: 'MS-DRG version. Omitted: the organization''s configured version when it has one,
+            else v40 (FY 2023).
 
-
-            * `v35` - v35
-
-            * `v36` - v36
-
-            * `v37` - v37
-
-            * `v38` - v38
-
-            * `v39` - v39
 
             * `v40` - v40
 
@@ -5254,19 +5235,9 @@ components:
         version:
           allOf:
           - $ref: '#/components/schemas/VersionEnum'
-          default: v40
-          description: 'MS-DRG version (default: v40, FY 2023)
+          description: 'MS-DRG version. Omitted: the organization''s configured version when it has one,
+            else v40 (FY 2023).
 
-
-            * `v35` - v35
-
-            * `v36` - v36
-
-            * `v37` - v37
-
-            * `v38` - v38
-
-            * `v39` - v39
 
             * `v40` - v40
 
@@ -6962,28 +6933,13 @@ components:
       - total_tokens
     VersionEnum:
       enum:
-      - v35
-      - v36
-      - v37
-      - v38
-      - v39
       - v40
       - v41
       - v42
       - v43
       - v44
       type: string
-      description: '* `v35` - v35
-
-        * `v36` - v36
-
-        * `v37` - v37
-
-        * `v38` - v38
-
-        * `v39` - v39
-
-        * `v40` - v40
+      description: '* `v40` - v40
 
         * `v41` - v41
 
