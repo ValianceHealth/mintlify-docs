@@ -116,8 +116,14 @@ the modules the key names. Such a tool takes the API's path and query
 parameters as arguments and its JSON request body as `body`, and answers
 `{status, body}`, where `body` is the API's own response and a `status` of `400`
 or more is the API's error, whose body names what to fix. For example,
-`v1_drg_classify_create` takes
+`global_drg_classify` takes
 `{"body": {"dx_codes": ["I21.09"], "gender": "M"}}` and answers with the MS-DRG.
+
+A tool's name starts with the module it belongs to (`analytics_`, `predictions_`,
+`simulation_`, `snapshot_`, `vbhc_`), or `global_` for a platform tool or one
+several modules share. Until at least 31 May 2027, `tools/call` also accepts
+the name each API tool had before (its API operation id, such as
+`v1_drg_classify_create`); `tools/list` shows only the current names.
 
 The tools that are not an API read are:
 
